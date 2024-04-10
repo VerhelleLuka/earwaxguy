@@ -9,15 +9,18 @@ public class PlayerMovement : MonoBehaviour
     public float moveSpeed = 5f;
     public float brakeSpeed = 0.5f;
     public float jumpPower = 50f;
+    public float momentumShiftPower = 250f;
 
     private bool Grounded = true;
     private float HorizontalMovement;
+    private float VerticalMovement;
 
     //Swinging
     private DistanceJoint2D SpringJoint;
     private bool CanSwing = false;
     private bool Swinging = false;
     private Vector2 SwingPosition = new Vector2();
+
     
     void Start()
     {
@@ -41,6 +44,7 @@ public class PlayerMovement : MonoBehaviour
     public void Move(InputAction.CallbackContext context)
     {
         HorizontalMovement = context.ReadValue<Vector2>().x;
+        VerticalMovement = context.ReadValue<Vector2>().y;
 
     }
     public void Jump(InputAction.CallbackContext context)
@@ -52,6 +56,12 @@ public class PlayerMovement : MonoBehaviour
             Grounded = false;
         }
 
+    }
+
+    public void MomentumShift(InputAction.CallbackContext context)
+    {
+        body.velocity = new Vector2(0, 0);
+        body.AddForce(new Vector2(HorizontalMovement * momentumShiftPower, VerticalMovement * momentumShiftPower));
     }
     public void Swing(InputAction.CallbackContext context)
     {
