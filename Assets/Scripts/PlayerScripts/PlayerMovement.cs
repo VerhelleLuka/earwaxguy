@@ -18,10 +18,6 @@ public class PlayerMovement : MonoBehaviour
     private bool CanSwing = false;
     private bool Swinging = false;
     private Vector2 SwingPosition = new Vector2();
-    private float TimeSwung = 0f;
-    private float ShortenRopeTime = 0.5f;
-    public float beginFrequency = 0f;
-    public float endFrequency = 0.5f;
     
     void Start()
     {
@@ -31,14 +27,6 @@ public class PlayerMovement : MonoBehaviour
     private void Update()
     {
 
-        if (Swinging)
-        {
-            TimeSwung += Time.deltaTime;
-
-            //if (TimeSwung < ShortenRopeTime)
-                //SpringJoint.frequency = Mathf.Lerp(beginFrequency, endFrequency, TimeSwung / ShortenRopeTime);
-
-        }
     }
     private void FixedUpdate()
     {
@@ -84,11 +72,9 @@ public class PlayerMovement : MonoBehaviour
 
 
         }
-        if (context.ReadValue<float>() == 0f)
+        else if (context.ReadValue<float>() == 0f)
         {
             Swinging = false;
-            TimeSwung = 0f;
-
             Destroy(SpringJoint);
         }
     }
@@ -111,7 +97,7 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    private void OnCollisionExit2D(Collision2D collision)
+    private void OnTriggerExit2D(Collider2D collision)
     {
         if (collision.gameObject.tag == ("Swing"))
         {
