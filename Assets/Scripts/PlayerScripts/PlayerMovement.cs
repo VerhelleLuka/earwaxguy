@@ -22,9 +22,16 @@ public class PlayerMovement : MonoBehaviour
     private Vector2 SwingPosition = new Vector2();
     private const float SwingRotationOffset = -90f;//In degrees
     private float AngularVelocityBeforeSwing = 0f;
+
+    //arms
+    public LineRenderer lineRenderer;
+
     //Stuck in wax
     private bool Stuck = false;
-    public float moveSpeedStuck = 1.5f;
+    public float moveSpeedStuck = 1.9f;
+
+    //momentumshift
+    private bool CanMomentumShift = false;
 
 
     void Start()
@@ -34,18 +41,19 @@ public class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
-
-    }
-    private void FixedUpdate()
-    {
-        if(Swinging)
+        if (Swinging)
         {
             Vector3 relativePos = new Vector3(SwingPosition.x, SwingPosition.y, 0) - transform.position;
             float angle = Mathf.Atan2(relativePos.y, relativePos.x) * Mathf.Rad2Deg;
             angle += SwingRotationOffset;
             Debug.Log(angle);
             transform.rotation = Quaternion.Euler(new Vector3(0, 0, angle));
+            lineRenderer.SetPosition(1, new Vector3(transform.position.x, transform.position.y, -1f));
         }
+    }
+    private void FixedUpdate()
+    {
+
         //To check if player input is inverse of player velocity
         if(Stuck)
         {
@@ -77,8 +85,14 @@ public class PlayerMovement : MonoBehaviour
 
     public void MomentumShift(InputAction.CallbackContext context)
     {
-        body.velocity = new Vector2(0, 0);
-        body.AddForce(new Vector2(HorizontalMovement * momentumShiftPower, VerticalMovement * momentumShiftPower));
+        if(CanMomentumShift)
+        {
+            body.velocity = new Vector2(0, 0);
+            body.AddForce(new Vector2(HorizontalMovement * momentumShiftPower, VerticalMovement * momentumShiftPower));
+            CanMomentumShift = false;
+
+        }
+
     }
     public void Swing(InputAction.CallbackContext context)
     {
@@ -88,6 +102,8 @@ public class PlayerMovement : MonoBehaviour
 
             if (SpringJoint == null)
             {
+
+
                 SpringJoint = gameObject.AddComponent<DistanceJoint2D>();
                 SpringJoint.connectedAnchor = SwingPosition;
                 SpringJoint.distance = Vector2.Distance(SwingPosition, gameObject.transform.position);
@@ -96,6 +112,10 @@ public class PlayerMovement : MonoBehaviour
                 //Stop character from spinning
                 AngularVelocityBeforeSwing = body.angularVelocity;
                 body.angularVelocity = 0;
+
+                
+                lineRenderer.SetPosition(0, new Vector3(SwingPosition.x, SwingPosition.y, -1f));
+                lineRenderer.enabled = true;
             }
 
 
@@ -105,6 +125,7 @@ public class PlayerMovement : MonoBehaviour
             Swinging = false;
             Destroy(SpringJoint);
             body.angularVelocity = AngularVelocityBeforeSwing;
+            lineRenderer.enabled = false;
 
         }
     }
@@ -113,6 +134,8 @@ public class PlayerMovement : MonoBehaviour
         if (collision.gameObject.tag == ("Ground"))
         {
             Grounded = true;
+            CanMomentumShift = true;
+
         }
     }
 
@@ -123,14 +146,17 @@ public class PlayerMovement : MonoBehaviour
         {
             CanSwing = true;
             SwingPosition = collision.transform.position;
+            CanMomentumShift = true;
         }
         if (collision.gameObject.tag == "WaxObject")
         {
             body.gravityScale = 0f;
-            body.velocity = body.velocity.normalized;
+            body.velocity = body.velocity * 0.1f ;
             body.angularVelocity = 0f;
             Stuck = true;
             Grounded = true;
+            CanMomentumShift = true;
+
         }
     }
 
