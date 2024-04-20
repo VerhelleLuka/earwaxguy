@@ -5,6 +5,8 @@ using UnityEngine;
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
+
+    public bool GodMode = false;
     void Awake()
     {
         Instance = this;
@@ -15,4 +17,6 @@ public class GameManager : MonoBehaviour
     {
         
     }
+
+    void ResetPlayerPos
 }

@@ -9,7 +9,7 @@ public class PlayerMovement : MonoBehaviour
     public float moveSpeed = 5f;
     public float brakeSpeed = 0.5f;
     public float jumpPower = 50f;
-    public float momentumShiftPower = 250f;
+    public float momentumShiftPower = 10f;
 
     private bool Grounded = true;
     private float HorizontalMovement;
@@ -85,10 +85,10 @@ public class PlayerMovement : MonoBehaviour
 
     public void MomentumShift(InputAction.CallbackContext context)
     {
-        if(CanMomentumShift)
+        if(CanMomentumShift || GameManager.Instance.GodMode)
         {
             body.velocity = new Vector2(0, 0);
-            body.AddForce(new Vector2(HorizontalMovement * momentumShiftPower, VerticalMovement * momentumShiftPower));
+            body.velocity = new Vector2(HorizontalMovement * momentumShiftPower, VerticalMovement * momentumShiftPower);
             CanMomentumShift = false;
 
         }
