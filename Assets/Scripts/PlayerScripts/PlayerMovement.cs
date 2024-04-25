@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -34,19 +36,25 @@ public class PlayerMovement : MonoBehaviour
     private bool CanMomentumShift = false;
 
 
-    void Start()
-    {
-
-    }
-
     private void Update()
     {
-        if (Swinging)
+        if (!Swinging && CanSwing)
+        {
+            Vector3 playerPos = transform.position;
+            playerPos.z = 0f;
+            Vector3 swingPos = SwingPosition;
+            //Draw line halfway between player and swing
+            Vector3 lineRendererPos = playerPos + 0.5f * (swingPos - playerPos);
+            lineRendererPos.z = -1f;
+            lineRenderer.SetPosition(0, lineRendererPos);
+
+            lineRenderer.SetPosition(1, new Vector3(transform.position.x, transform.position.y, -1f));
+        }
+        else if (Swinging)
         {
             Vector3 relativePos = new Vector3(SwingPosition.x, SwingPosition.y, 0) - transform.position;
             float angle = Mathf.Atan2(relativePos.y, relativePos.x) * Mathf.Rad2Deg;
             angle += SwingRotationOffset;
-            Debug.Log(angle);
             transform.rotation = Quaternion.Euler(new Vector3(0, 0, angle));
             lineRenderer.SetPosition(1, new Vector3(transform.position.x, transform.position.y, -1f));
         }
@@ -55,16 +63,23 @@ public class PlayerMovement : MonoBehaviour
     {
 
         //To check if player input is inverse of player velocity
-        if(Stuck)
+        if (Stuck)
         {
             body.velocity = new Vector2(HorizontalMovement * moveSpeedStuck * Time.fixedDeltaTime, VerticalMovement * moveSpeedStuck * Time.fixedDeltaTime);
             return;
         }
-        if (((HorizontalMovement < 0 && body.velocity.x > 0) || (HorizontalMovement > 0 && body.velocity.x < 0)))
-            body.AddForce(new Vector2(HorizontalMovement * moveSpeed * brakeSpeed * Time.fixedDeltaTime, 0));
+        if (!Swinging)
+        {
+            if ((HorizontalMovement < 0 && body.velocity.x > 0) || (HorizontalMovement > 0 && body.velocity.x < 0))
+                body.AddForce(new Vector2(HorizontalMovement * moveSpeed * brakeSpeed * Time.fixedDeltaTime, 0));
 
+            else
+                body.AddForce(new Vector2(HorizontalMovement * moveSpeed * Time.fixedDeltaTime, 0));
+        }
         else
-            body.AddForce(new Vector2(HorizontalMovement * moveSpeed * Time.fixedDeltaTime, 0));
+        {
+            body.AddForce(new Vector2(HorizontalMovement * moveSpeed * Time.fixedDeltaTime, VerticalMovement * moveSpeed * Time.fixedDeltaTime));
+        }
 
     }
     public void Move(InputAction.CallbackContext context)
@@ -85,41 +100,43 @@ public class PlayerMovement : MonoBehaviour
 
     public void MomentumShift(InputAction.CallbackContext context)
     {
-        if(CanMomentumShift || GameManager.Instance.GodMode)
+        if (CanMomentumShift || GameManager.Instance.GodMode)
         {
             body.velocity = new Vector2(0, 0);
-            body.velocity = new Vector2(HorizontalMovement * momentumShiftPower, VerticalMovement * momentumShiftPower);
-            CanMomentumShift = false;
+            Vector2 newVelocity = new Vector2(HorizontalMovement, VerticalMovement).normalized;
 
+            if (context.control.name == "rightButton")
+            {
+                Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                newVelocity = new Vector2((mousePos.x - transform.position.x), (mousePos.y - transform.position.y)).normalized;
+            }
+
+            body.velocity = newVelocity * momentumShiftPower;
+            CanMomentumShift = false;
         }
 
     }
     public void Swing(InputAction.CallbackContext context)
     {
-        if (CanSwing && context.ReadValue<float>() > 0f)
+        if (CanSwing)
         {
-            Swinging = true;
+            lineRenderer.enabled = true;
 
             if (SpringJoint == null)
             {
-
-
                 SpringJoint = gameObject.AddComponent<DistanceJoint2D>();
                 SpringJoint.connectedAnchor = SwingPosition;
                 SpringJoint.distance = Vector2.Distance(SwingPosition, gameObject.transform.position);
                 SpringJoint.enableCollision = false;
-
-                //Stop character from spinning
-                AngularVelocityBeforeSwing = body.angularVelocity;
-                body.angularVelocity = 0;
-
-                
-                lineRenderer.SetPosition(0, new Vector3(SwingPosition.x, SwingPosition.y, -1f));
-                lineRenderer.enabled = true;
             }
-
-
         }
+        if (context.ReadValue<float>() > 0f && CanSwing)
+        {
+            lineRenderer.SetPosition(0, new Vector3(SwingPosition.x, SwingPosition.y, -1f));
+            Swinging = true;
+            AngularVelocityBeforeSwing =body.angularVelocity;
+        }
+
         else if (context.ReadValue<float>() == 0f)
         {
             Swinging = false;
@@ -135,7 +152,6 @@ public class PlayerMovement : MonoBehaviour
         {
             Grounded = true;
             CanMomentumShift = true;
-
         }
     }
 
@@ -144,6 +160,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (collision.gameObject.tag == "Swing")
         {
+            lineRenderer.enabled = true;
             CanSwing = true;
             SwingPosition = collision.transform.position;
             CanMomentumShift = true;
@@ -151,7 +168,7 @@ public class PlayerMovement : MonoBehaviour
         if (collision.gameObject.tag == "WaxObject")
         {
             body.gravityScale = 0f;
-            body.velocity = body.velocity * 0.1f ;
+            body.velocity = body.velocity * 0.1f;
             body.angularVelocity = 0f;
             Stuck = true;
             Grounded = true;
@@ -165,6 +182,9 @@ public class PlayerMovement : MonoBehaviour
         if (collision.gameObject.tag == ("Swing"))
         {
             CanSwing = false;
+            if(!Swinging)
+                lineRenderer.enabled = false;
+
         }
         if (collision.gameObject.tag == "WaxObject")
         {

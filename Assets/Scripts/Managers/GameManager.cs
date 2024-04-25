@@ -18,5 +18,8 @@ public class GameManager : MonoBehaviour
         
     }
 
-    void ResetPlayerPos
+    void ResetLevel()
+    {
+
+    }
 }
