@@ -11,7 +11,7 @@ public class MarchingSquares : MonoBehaviour
     [SerializeField][Range(0.01f, .2f)] float noiseResolution = .1f;
     [SerializeField][Range(0.05f, 1f)] float resolution = 1f;
     [SerializeField][Range(0f, 1f)] float heightTreshold = .5f;
-    [SerializeField][Range(1, 10)] float drawRange = 1f;
+    [SerializeField][Range(0, 10)] float drawRange = 1f;
 
     [SerializeField][Range(0, 1)] float defaultHeight = 0f;
     [SerializeField] bool useDefaultHeight = false;
@@ -289,21 +289,11 @@ public class MarchingSquares : MonoBehaviour
         Vector3 playerPos = new Vector3(playerRb.position.x, playerRb.position.y, 0) - transform.position;
         float finalDrawPower = 0f;
         float drawPower = 3f;
-        //Debug.Log(playerPos);
 
-        //if(Input.GetMouseButton(0))
-        //{
-        //    finalDrawPower = 1f * drawPower;
-
-        //}
-        //if (Input.GetMouseButton(1))
-        //{
-        //    finalDrawPower = -1f * drawPower;
-        //}
-
+        //Negative to lower the values
         finalDrawPower = -1f * drawPower;
-        //if(Input.GetMouseButton(0) ||Input.GetMouseButton(1))
-        //{
+
+        //Divide by resolution to match correct mesh coordinates
         for (float i = (playerPos.x - drawRange) / resolution; i < (playerPos.x + drawRange) / resolution; ++i)
         {
 
@@ -318,11 +308,12 @@ public class MarchingSquares : MonoBehaviour
                     if (resolution < 1)
                         Debug.Log("i = " + i);
                     float distanceToMouse = Vector2.Distance(new Vector2(i * resolution, j * resolution), new Vector2(playerPos.x, playerPos.y));
+                    //Clamp between 0 and 1 in fuction of time, drawPower and distance to mouse
                     heights[x, y] = Mathf.Clamp(heights[x, y] + Time.deltaTime * finalDrawPower * Mathf.Clamp(drawRange - distanceToMouse, 0, 1000), 0, 1);
                 }
 
             }
         }
-        //}
+        
     }
 }
