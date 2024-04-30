@@ -84,9 +84,6 @@ public class MarchingSquares : MonoBehaviour
         {
             verticesAsVector2.Add(Vertices[i]);
         }
-        //verticesAsVector2 = verticesAsVector2.Distinct().ToList();
-
-        //PolygonCollider.SetPath(0, verticesAsVector2);
 
         _MeshFilter.mesh = mesh;
         Collider.size = new Vector2(size * resolution, size * resolution);

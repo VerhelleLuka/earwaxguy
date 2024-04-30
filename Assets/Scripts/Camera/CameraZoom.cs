@@ -5,8 +5,6 @@ using UnityEngine;
 
 public class CameraZoom : MonoBehaviour
 {
-
-
     private void Awake()
     {
     }

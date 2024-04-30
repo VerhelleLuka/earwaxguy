@@ -28,9 +28,11 @@ public class PlayerMovement : MonoBehaviour
     //arms
     public LineRenderer lineRenderer;
 
-    //Stuck in wax
+    //Stuck in (removable) wax
     private bool Stuck = false;
+    private bool StuckRemovable = false;
     public float moveSpeedStuck = 1.9f;
+    public float forceToAddOnExitWax = 10f;
 
     //momentumshift
     private bool CanMomentumShift = false;
@@ -68,6 +70,11 @@ public class PlayerMovement : MonoBehaviour
             body.velocity = new Vector2(HorizontalMovement * moveSpeedStuck * Time.fixedDeltaTime, VerticalMovement * moveSpeedStuck * Time.fixedDeltaTime);
             return;
         }
+        if(StuckRemovable)
+        {
+            body.AddForce(new Vector2(HorizontalMovement * moveSpeed * brakeSpeed * Time.fixedDeltaTime, VerticalMovement * Time.fixedDeltaTime * moveSpeed));
+            return;
+        }
         if (!Swinging)
         {
             if ((HorizontalMovement < 0 && body.velocity.x > 0) || (HorizontalMovement > 0 && body.velocity.x < 0))
@@ -88,6 +95,11 @@ public class PlayerMovement : MonoBehaviour
         VerticalMovement = context.ReadValue<Vector2>().y;
 
     }
+    public void Reset()
+    {
+        GameManager.instance.ResetLevel(transform);
+
+    }
     public void Jump(InputAction.CallbackContext context)
     {
         if (Grounded)
@@ -100,7 +112,7 @@ public class PlayerMovement : MonoBehaviour
 
     public void MomentumShift(InputAction.CallbackContext context)
     {
-        if (CanMomentumShift || GameManager.Instance.GodMode)
+        if (CanMomentumShift || GameManager.instance.godMode)
         {
             body.velocity = new Vector2(0, 0);
             Vector2 newVelocity = new Vector2(HorizontalMovement, VerticalMovement).normalized;
@@ -165,6 +177,15 @@ public class PlayerMovement : MonoBehaviour
             SwingPosition = collision.transform.position;
             CanMomentumShift = true;
         }
+        if (collision.gameObject.tag == "RemovableWaxObject")
+        {
+            body.gravityScale = 0f;
+            body.angularVelocity = 0f;
+            Grounded = true;
+            CanMomentumShift = true;
+            StuckRemovable = true;
+
+        }
         if (collision.gameObject.tag == "WaxObject")
         {
             body.gravityScale = 0f;
@@ -185,6 +206,13 @@ public class PlayerMovement : MonoBehaviour
             if(!Swinging)
                 lineRenderer.enabled = false;
 
+        }
+        if (collision.gameObject.tag == "RemovableWaxObject")
+        {
+            body.AddForce(body.velocity * forceToAddOnExitWax);
+            body.velocity = body.velocity.normalized;
+            body.gravityScale = 1f;
+            StuckRemovable = false;
         }
         if (collision.gameObject.tag == "WaxObject")
         {

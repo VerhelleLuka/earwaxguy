@@ -7,6 +7,7 @@ TagManager:
   - Ground
   - Swing
   - WaxObject
+  - RemovableWaxObject
   layers:
   - Default
   - TransparentFX
