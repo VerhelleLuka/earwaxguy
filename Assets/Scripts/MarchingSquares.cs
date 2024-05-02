@@ -7,7 +7,8 @@ using UnityEngine;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer), typeof(BoxCollider2D))]
 public class MarchingSquares : MonoBehaviour
 {
-    [SerializeField][Range(0, 200)] int size = 5;
+    [SerializeField][Range(0, 200)] int width = 5;
+    [SerializeField][Range(0, 200)] int height = 5;
     [SerializeField][Range(0.01f, .2f)] float noiseResolution = .1f;
     [SerializeField][Range(0.05f, 1f)] float resolution = 1f;
     [SerializeField][Range(0f, 1f)] float heightTreshold = .5f;
@@ -26,6 +27,16 @@ public class MarchingSquares : MonoBehaviour
 
     private List<Vector3> Vertices = new List<Vector3>();
     private List<int> Triangles = new List<int>();
+
+    public bool debug = false;
+    private bool ValueChanged = true;
+
+    public float expulsionStrength = 20f;
+
+    //repairing of heigts
+    private float[,] heightsToRestore;
+    private bool changedLastFrame = false;
+
 
 
     void Start()
@@ -46,26 +57,34 @@ public class MarchingSquares : MonoBehaviour
     {
         while (true)
         {
-            MarchSquares();
-            CreateMesh();
-            CreateGrid();
+            if (ValueChanged)//ValueChanged
+            {
+                MarchSquares();
+                CreateMesh();
+                if (debug)
+                    CreateGrid();
+                ValueChanged = false;
+            }
+
             yield return new WaitForSeconds(0.1f);
         }
     }
 
     private void SetHeights()
     {
-        heights = new float[size + 1, size + 1];
-
-        for (int i = 0; i <= size; ++i)
+        heights = new float[width + 1, height + 1];
+        heightsToRestore = new float[width + 1, height + 1];
+        for (int i = 0; i <= width; ++i)
         {
-            for (int j = 0; j <= size; ++j)
+            for (int j = 0; j <= height; ++j)
             {
                 if (!useDefaultHeight)
                     heights[i, j] = Mathf.PerlinNoise(i * noiseResolution, j * noiseResolution);
 
                 else
                     heights[i, j] = defaultHeight;
+
+                heightsToRestore[i, j] = -1;
             }
         }
 
@@ -86,17 +105,17 @@ public class MarchingSquares : MonoBehaviour
         }
 
         _MeshFilter.mesh = mesh;
-        Collider.size = new Vector2(size * resolution, size * resolution);
-        Collider.offset = new Vector2((size / 2f) * resolution, (size / 2f) * resolution);
+        Collider.size = new Vector2(width * resolution, height * resolution);
+        Collider.offset = new Vector2((width / 2f) * resolution, (height / 2f) * resolution);
     }
 
     private void MarchSquares()
     {
         Vertices.Clear();
         Triangles.Clear();
-        for (int i = 0; i < size; ++i)
+        for (int i = 0; i < width; ++i)
         {
-            for (int j = 0; j < size; ++j)
+            for (int j = 0; j < height; ++j)
             {
                 float botLeftVertex = heights[i, j];
                 float botRightVertex = heights[i + 1, j];
@@ -249,6 +268,22 @@ public class MarchingSquares : MonoBehaviour
         }
     }
 
+    private void RepairSquares()
+    {
+        for (int i = 0; i < width; ++i)
+        {
+            for (int j = 0; j < height; ++j)
+            {
+                float botLeftVertex = heights[i, j];
+                float botRightVertex = heights[i + 1, j];
+                float topRightVertex = heights[i + 1, j + 1];
+                float topLeftVertex = heights[i, j + 1];
+
+                MarchSquare(botLeftVertex, botRightVertex, topRightVertex, topLeftVertex, i, j);
+            }
+        }
+    }
+
     private int GetHeight(float value)//If the Perlin value is lower than the height threshold
     {
         return value < heightTreshold ? 0 : 1;
@@ -261,9 +296,9 @@ public class MarchingSquares : MonoBehaviour
             Destroy(child.gameObject);
         }
 
-        for (int i = 0; i <= size; ++i)
+        for (int i = 0; i <= width; ++i)
         {
-            for (int j = 0; j <= size; ++j)
+            for (int j = 0; j <= height; ++j)
             {
                 Vector2 pos = transform.TransformPoint(new Vector2(i * resolution, j * resolution));
                 Transform newCirlce = Instantiate(circlePrefab, pos, new Quaternion(), circleParent);
@@ -295,15 +330,14 @@ public class MarchingSquares : MonoBehaviour
         {
 
 
-            for (float j = (playerPos.y - drawRange) / resolution; j < (playerPos.y + drawRange)/resolution; ++j)
+            for (float j = (playerPos.y - drawRange) / resolution; j < (playerPos.y + drawRange) / resolution; ++j)
             {
 
                 int x = Mathf.FloorToInt(i);
                 int y = Mathf.FloorToInt(j);
-                if (x >= 0 && x <= size && y >= 0 && y <= size)
+                if (x >= 0 && x <= width && y >= 0 && y <= height)
                 {
-                    if (resolution < 1)
-                        Debug.Log("i = " + i);
+                    ValueChanged = true;
                     float distanceToMouse = Vector2.Distance(new Vector2(i * resolution, j * resolution), new Vector2(playerPos.x, playerPos.y));
                     //Clamp between 0 and 1 in fuction of time, drawPower and distance to mouse
                     heights[x, y] = Mathf.Clamp(heights[x, y] + Time.deltaTime * finalDrawPower * Mathf.Clamp(drawRange - distanceToMouse, 0, 1000), 0, 1);
@@ -311,6 +345,6 @@ public class MarchingSquares : MonoBehaviour
 
             }
         }
-        
+
     }
 }

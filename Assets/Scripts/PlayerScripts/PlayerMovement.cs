@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
@@ -11,7 +12,6 @@ public class PlayerMovement : MonoBehaviour
     public float moveSpeed = 5f;
     public float brakeSpeed = 0.5f;
     public float jumpPower = 50f;
-    public float momentumShiftPower = 10f;
 
     private bool Grounded = true;
     private float HorizontalMovement;
@@ -31,15 +31,31 @@ public class PlayerMovement : MonoBehaviour
     //Stuck in (removable) wax
     private bool Stuck = false;
     private bool StuckRemovable = false;
-    public float moveSpeedStuck = 1.9f;
+    public float moveSpeedStuck = 60f;
     public float forceToAddOnExitWax = 10f;
+    private float ExitWaxVelocityMultiplier = 0f;
+    public float maxWaxVelocity = 150f;
 
-    //momentumshift
-    private bool CanMomentumShift = false;
+    //dash
+    private bool CanDash = true;
+    public float dashPower = 10f;
+    public float dashCooldown = 2f;
+    private float dashCooldownTimer = 0f;
+    public event Action DashExecuted;
+
 
 
     private void Update()
     {
+        if (!CanDash)
+        {
+            dashCooldownTimer += Time.deltaTime;
+            if (dashCooldownTimer >= dashCooldown)
+            {
+                dashCooldownTimer = 0f;
+                CanDash = true;
+            }
+        }
         if (!Swinging && CanSwing)
         {
             Vector3 playerPos = transform.position;
@@ -70,9 +86,13 @@ public class PlayerMovement : MonoBehaviour
             body.velocity = new Vector2(HorizontalMovement * moveSpeedStuck * Time.fixedDeltaTime, VerticalMovement * moveSpeedStuck * Time.fixedDeltaTime);
             return;
         }
-        if(StuckRemovable)
+        if (StuckRemovable)
         {
-            body.AddForce(new Vector2(HorizontalMovement * moveSpeed * brakeSpeed * Time.fixedDeltaTime, VerticalMovement * Time.fixedDeltaTime * moveSpeed));
+            if(body.velocity.magnitude < maxWaxVelocity)
+                body.AddForce(new Vector2(HorizontalMovement, VerticalMovement) * moveSpeed * Time.fixedDeltaTime);
+            //Player has free movement in the wax
+            body.velocity = new Vector2(HorizontalMovement, VerticalMovement) * body.velocity.magnitude;
+
             return;
         }
         if (!Swinging)
@@ -110,9 +130,9 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    public void MomentumShift(InputAction.CallbackContext context)
+    public void Dash(InputAction.CallbackContext context)
     {
-        if (CanMomentumShift || GameManager.instance.godMode)
+        if (CanDash || GameManager.instance.godMode)
         {
             body.velocity = new Vector2(0, 0);
             Vector2 newVelocity = new Vector2(HorizontalMovement, VerticalMovement).normalized;
@@ -123,8 +143,10 @@ public class PlayerMovement : MonoBehaviour
                 newVelocity = new Vector2((mousePos.x - transform.position.x), (mousePos.y - transform.position.y)).normalized;
             }
 
-            body.velocity = newVelocity * momentumShiftPower;
-            CanMomentumShift = false;
+            body.velocity = newVelocity * dashPower;
+
+            DashExecuted?.Invoke();
+            CanDash = false;
         }
 
     }
@@ -146,7 +168,7 @@ public class PlayerMovement : MonoBehaviour
         {
             lineRenderer.SetPosition(0, new Vector3(SwingPosition.x, SwingPosition.y, -1f));
             Swinging = true;
-            AngularVelocityBeforeSwing =body.angularVelocity;
+            AngularVelocityBeforeSwing = body.angularVelocity;
         }
 
         else if (context.ReadValue<float>() == 0f)
@@ -163,7 +185,6 @@ public class PlayerMovement : MonoBehaviour
         if (collision.gameObject.tag == ("Ground"))
         {
             Grounded = true;
-            CanMomentumShift = true;
         }
     }
 
@@ -175,15 +196,14 @@ public class PlayerMovement : MonoBehaviour
             lineRenderer.enabled = true;
             CanSwing = true;
             SwingPosition = collision.transform.position;
-            CanMomentumShift = true;
         }
         if (collision.gameObject.tag == "RemovableWaxObject")
         {
             body.gravityScale = 0f;
             body.angularVelocity = 0f;
             Grounded = true;
-            CanMomentumShift = true;
             StuckRemovable = true;
+            ExitWaxVelocityMultiplier = collision.GetComponent<MarchingSquares>().expulsionStrength;
 
         }
         if (collision.gameObject.tag == "WaxObject")
@@ -193,7 +213,6 @@ public class PlayerMovement : MonoBehaviour
             body.angularVelocity = 0f;
             Stuck = true;
             Grounded = true;
-            CanMomentumShift = true;
 
         }
     }
@@ -203,16 +222,16 @@ public class PlayerMovement : MonoBehaviour
         if (collision.gameObject.tag == ("Swing"))
         {
             CanSwing = false;
-            if(!Swinging)
+            if (!Swinging)
                 lineRenderer.enabled = false;
 
         }
         if (collision.gameObject.tag == "RemovableWaxObject")
         {
             body.AddForce(body.velocity * forceToAddOnExitWax);
-            body.velocity = body.velocity.normalized;
             body.gravityScale = 1f;
             StuckRemovable = false;
+            body.AddForce(body.velocity.normalized * ExitWaxVelocityMultiplier);
         }
         if (collision.gameObject.tag == "WaxObject")
         {
