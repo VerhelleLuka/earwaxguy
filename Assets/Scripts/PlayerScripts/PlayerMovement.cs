@@ -12,8 +12,9 @@ public class PlayerMovement : MonoBehaviour
     public float moveSpeed = 5f;
     public float brakeSpeed = 0.5f;
     public float jumpPower = 50f;
+    public float maxVelocity = 15f;
 
-    private bool Grounded = true;
+    public bool grounded = true;
     private float HorizontalMovement;
     private float VerticalMovement;
 
@@ -42,6 +43,8 @@ public class PlayerMovement : MonoBehaviour
     public float dashCooldown = 2f;
     private float dashCooldownTimer = 0f;
     public event Action DashExecuted;
+
+    
 
 
 
@@ -107,7 +110,7 @@ public class PlayerMovement : MonoBehaviour
         {
             body.AddForce(new Vector2(HorizontalMovement * moveSpeed * Time.fixedDeltaTime, VerticalMovement * moveSpeed * Time.fixedDeltaTime));
         }
-
+           
     }
     public void Move(InputAction.CallbackContext context)
     {
@@ -122,11 +125,11 @@ public class PlayerMovement : MonoBehaviour
     }
     public void Jump(InputAction.CallbackContext context)
     {
-        if (Grounded)
+        if (grounded)
         {
             body.velocity = new Vector2(body.velocity.x, 0);
             body.AddForce(new Vector2(0, jumpPower));
-            Grounded = false;
+            grounded = false;
         }
     }
 
@@ -184,7 +187,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (collision.gameObject.tag == ("Ground"))
         {
-            Grounded = true;
+            grounded = true;
         }
     }
 
@@ -201,7 +204,6 @@ public class PlayerMovement : MonoBehaviour
         {
             body.gravityScale = 0f;
             body.angularVelocity = 0f;
-            Grounded = true;
             StuckRemovable = true;
             ExitWaxVelocityMultiplier = collision.GetComponent<MarchingSquares>().expulsionStrength;
 
@@ -212,10 +214,10 @@ public class PlayerMovement : MonoBehaviour
             body.velocity = body.velocity * 0.1f;
             body.angularVelocity = 0f;
             Stuck = true;
-            Grounded = true;
 
         }
     }
+
 
     private void OnTriggerExit2D(Collider2D collision)
     {
