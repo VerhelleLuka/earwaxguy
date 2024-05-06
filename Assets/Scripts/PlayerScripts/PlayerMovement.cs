@@ -22,6 +22,7 @@ public class PlayerMovement : MonoBehaviour
     private DistanceJoint2D SpringJoint;
     private bool CanSwing = false;
     private bool Swinging = false;
+    private bool TryingToSwing = false;
     private Vector2 SwingPosition = new Vector2();
     private const float SwingRotationOffset = -90f;//In degrees
     private float AngularVelocityBeforeSwing = 0f;
@@ -44,19 +45,20 @@ public class PlayerMovement : MonoBehaviour
     private float dashCooldownTimer = 0f;
     public event Action DashExecuted;
 
-    
 
-
-
-    private void Update()
+    private bool CheckSwing()
     {
-        if (!CanDash)
+
+        if (CanSwing && TryingToSwing)
         {
-            dashCooldownTimer += Time.deltaTime;
-            if (dashCooldownTimer >= dashCooldown)
+            lineRenderer.enabled = true;
+
+            if (SpringJoint == null)
             {
-                dashCooldownTimer = 0f;
-                CanDash = true;
+                SpringJoint = gameObject.AddComponent<DistanceJoint2D>();
+                SpringJoint.connectedAnchor = SwingPosition;
+                SpringJoint.distance = Vector2.Distance(SwingPosition, gameObject.transform.position);
+                SpringJoint.enableCollision = false;
             }
         }
         if (!Swinging && CanSwing)
@@ -71,13 +73,55 @@ public class PlayerMovement : MonoBehaviour
 
             lineRenderer.SetPosition(1, new Vector3(transform.position.x, transform.position.y, -1f));
         }
-        else if (Swinging)
+
+        if (CanSwing && TryingToSwing)
         {
-            Vector3 relativePos = new Vector3(SwingPosition.x, SwingPosition.y, 0) - transform.position;
-            float angle = Mathf.Atan2(relativePos.y, relativePos.x) * Mathf.Rad2Deg;
-            angle += SwingRotationOffset;
-            transform.rotation = Quaternion.Euler(new Vector3(0, 0, angle));
-            lineRenderer.SetPosition(1, new Vector3(transform.position.x, transform.position.y, -1f));
+
+            lineRenderer.SetPosition(0, new Vector3(SwingPosition.x, SwingPosition.y, -1f));
+            Swinging = true;
+            AngularVelocityBeforeSwing = body.angularVelocity;
+            TryingToSwing = false;
+            return true;
+        }
+        return Swinging;
+    }
+    private void Swing()
+    {
+        Vector3 relativePos = new Vector3(SwingPosition.x, SwingPosition.y, 0) - transform.position;
+        float angle = Mathf.Atan2(relativePos.y, relativePos.x) * Mathf.Rad2Deg;
+        angle += SwingRotationOffset;
+        transform.rotation = Quaternion.Euler(new Vector3(0, 0, angle));
+        lineRenderer.SetPosition(1, new Vector3(transform.position.x, transform.position.y, -1f));
+
+    }
+
+
+    private void Update()
+    {
+        if (!CanDash)
+        {
+            dashCooldownTimer += Time.deltaTime;
+            if (dashCooldownTimer >= dashCooldown)
+            {
+                dashCooldownTimer = 0f;
+                CanDash = true;
+            }
+        }
+        if (CheckSwing())
+            Swing();
+
+    }
+    public void Swing(InputAction.CallbackContext context)
+    {
+        TryingToSwing = context.ReadValue<float>() > 0f ? true : false;
+
+        if (!TryingToSwing)
+        {
+            Swinging = false;
+            Destroy(SpringJoint);
+            body.angularVelocity = AngularVelocityBeforeSwing;
+            lineRenderer.enabled = false;
+
         }
     }
     private void FixedUpdate()
@@ -91,7 +135,7 @@ public class PlayerMovement : MonoBehaviour
         }
         if (StuckRemovable)
         {
-            if(body.velocity.magnitude < maxWaxVelocity)
+            if (body.velocity.magnitude < maxWaxVelocity)
                 body.AddForce(new Vector2(HorizontalMovement, VerticalMovement) * moveSpeed * Time.fixedDeltaTime);
             //Player has free movement in the wax
             body.velocity = new Vector2(HorizontalMovement, VerticalMovement) * body.velocity.magnitude;
@@ -110,7 +154,7 @@ public class PlayerMovement : MonoBehaviour
         {
             body.AddForce(new Vector2(HorizontalMovement * moveSpeed * Time.fixedDeltaTime, VerticalMovement * moveSpeed * Time.fixedDeltaTime));
         }
-           
+
     }
     public void Move(InputAction.CallbackContext context)
     {
@@ -135,9 +179,12 @@ public class PlayerMovement : MonoBehaviour
 
     public void Dash(InputAction.CallbackContext context)
     {
-        if (CanDash || GameManager.instance.godMode)
+        Debug.Log(body.velocity.magnitude);
+        if ((CanDash && context.ReadValue<float>() > 0f) || GameManager.instance.godMode)
         {
+            body.angularVelocity = 0f;
             body.velocity = new Vector2(0, 0);
+
             Vector2 newVelocity = new Vector2(HorizontalMovement, VerticalMovement).normalized;
 
             if (context.control.name == "rightButton")
@@ -145,44 +192,17 @@ public class PlayerMovement : MonoBehaviour
                 Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
                 newVelocity = new Vector2((mousePos.x - transform.position.x), (mousePos.y - transform.position.y)).normalized;
             }
-
-            body.velocity = newVelocity * dashPower;
+            if (body.velocity.magnitude < dashPower)
+                body.velocity = newVelocity * dashPower;
+            else
+                body.velocity = newVelocity * body.velocity.magnitude;
 
             DashExecuted?.Invoke();
             CanDash = false;
         }
 
     }
-    public void Swing(InputAction.CallbackContext context)
-    {
-        if (CanSwing)
-        {
-            lineRenderer.enabled = true;
 
-            if (SpringJoint == null)
-            {
-                SpringJoint = gameObject.AddComponent<DistanceJoint2D>();
-                SpringJoint.connectedAnchor = SwingPosition;
-                SpringJoint.distance = Vector2.Distance(SwingPosition, gameObject.transform.position);
-                SpringJoint.enableCollision = false;
-            }
-        }
-        if (context.ReadValue<float>() > 0f && CanSwing)
-        {
-            lineRenderer.SetPosition(0, new Vector3(SwingPosition.x, SwingPosition.y, -1f));
-            Swinging = true;
-            AngularVelocityBeforeSwing = body.angularVelocity;
-        }
-
-        else if (context.ReadValue<float>() == 0f)
-        {
-            Swinging = false;
-            Destroy(SpringJoint);
-            body.angularVelocity = AngularVelocityBeforeSwing;
-            lineRenderer.enabled = false;
-
-        }
-    }
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.tag == ("Ground"))
@@ -204,6 +224,7 @@ public class PlayerMovement : MonoBehaviour
         {
             body.gravityScale = 0f;
             body.angularVelocity = 0f;
+            grounded = true;
             StuckRemovable = true;
             ExitWaxVelocityMultiplier = collision.GetComponent<MarchingSquares>().expulsionStrength;
 
@@ -214,6 +235,7 @@ public class PlayerMovement : MonoBehaviour
             body.velocity = body.velocity * 0.1f;
             body.angularVelocity = 0f;
             Stuck = true;
+            grounded = true;
 
         }
     }
