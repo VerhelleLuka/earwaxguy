@@ -31,7 +31,6 @@ public class MarchingSquares : MonoBehaviour
     public bool debug = false;
     private bool ValueChanged = true;
 
-    private bool HeightChanged = true;
 
     public float expulsionStrength = 20f;
 
