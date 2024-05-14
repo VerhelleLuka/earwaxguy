@@ -7,13 +7,13 @@ public class Dashbar : MonoBehaviour
 {
     public Image image;
     [SerializeField] private PlayerMovement playerMovement;
-    private float cooldownTimer = 0f;
+    private float cooldownTimer = 1f;
     
     // Start is called before the first frame update
     void Start()
     {
        image.fillMethod = Image.FillMethod.Horizontal;
-        image.fillAmount = 0;
+        image.fillAmount = 1;
     }
 
     // Update is called once per frame
@@ -44,7 +44,7 @@ public class Dashbar : MonoBehaviour
 
     void OnDashExecuted()
     {
-        
+        cooldownTimer = 0f;
         image.color = Color.red;
         image.fillAmount = 0;
     }

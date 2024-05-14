@@ -18,7 +18,6 @@ public class PatrollingScript : MonoBehaviour
 
     private void Update()
     {
-        Debug.Log(nextPointIndex + currentPointIndex);
         transform.position += (patrollingPoints[nextPointIndex] - patrollingPoints[currentPointIndex]).normalized * Time.deltaTime * movementSpeed;
 
         if (Vector3.Distance(transform.position, patrollingPoints[nextPointIndex]) < DistanceMargin)

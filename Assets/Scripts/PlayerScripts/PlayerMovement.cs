@@ -6,22 +6,22 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 
-public class PlayerMovement : MonoBehaviour
+public class PlayerMovement : BaseMovement
 {
-    public Rigidbody2D body;
     public float moveSpeed = 5f;
     public float brakeSpeed = 0.5f;
     public float jumpPower = 50f;
     public float maxVelocity = 15f;
 
-    public bool grounded = true;
-    private float HorizontalMovement;
-    private float VerticalMovement;
+    private bool Grounded = true;
+    public bool grounded { get { return Grounded; } }
+
 
     //Swinging
     private DistanceJoint2D SpringJoint;
     private bool CanSwing = false;
     private bool Swinging = false;
+    public bool swinging { get { return Swinging; } }
     private bool TryingToSwing = false;
     private Vector2 SwingPosition = new Vector2();
     private const float SwingRotationOffset = -90f;//In degrees
@@ -45,7 +45,16 @@ public class PlayerMovement : MonoBehaviour
     private float dashCooldownTimer = 0f;
     public event Action DashExecuted;
 
+    //Jump Grace Time
+    private bool CanJump = true;
+    private bool JumpRequest = false;
+    private const float JumpRequestGraceTime = 0.3f;
+    private float JumpRequestGraceTimer = 0f;
 
+    private void Start()
+    {
+        body = GetComponentInParent<Rigidbody2D>();
+    }
     private bool CheckSwing()
     {
 
@@ -98,6 +107,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
+
         if (!CanDash)
         {
             dashCooldownTimer += Time.deltaTime;
@@ -109,6 +119,21 @@ public class PlayerMovement : MonoBehaviour
         }
         if (CheckSwing())
             Swing();
+
+        if (JumpRequest)
+        {
+            JumpRequestGraceTimer += Time.deltaTime;
+            if (JumpRequestGraceTimer < JumpRequestGraceTime && CanJump)
+            {
+                Jump();
+
+            }
+            else if(JumpRequestGraceTimer > JumpRequestGraceTime)
+            {
+                JumpRequestGraceTimer = 0f;
+                JumpRequest = false;
+            }
+        }
 
     }
     public void Swing(InputAction.CallbackContext context)
@@ -126,14 +151,13 @@ public class PlayerMovement : MonoBehaviour
     }
     private void FixedUpdate()
     {
-
         //To check if player input is inverse of player velocity
         if (Stuck)
         {
             body.velocity = new Vector2(HorizontalMovement * moveSpeedStuck * Time.fixedDeltaTime, VerticalMovement * moveSpeedStuck * Time.fixedDeltaTime);
             return;
         }
-        if (StuckRemovable)
+        else if (StuckRemovable)
         {
             if (body.velocity.magnitude < maxWaxVelocity)
                 body.AddForce(new Vector2(HorizontalMovement, VerticalMovement) * moveSpeed * Time.fixedDeltaTime);
@@ -142,12 +166,12 @@ public class PlayerMovement : MonoBehaviour
 
             return;
         }
-        if (!Swinging)
+        else if (!Swinging)
         {
             if ((HorizontalMovement < 0 && body.velocity.x > 0) || (HorizontalMovement > 0 && body.velocity.x < 0))
                 body.AddForce(new Vector2(HorizontalMovement * moveSpeed * brakeSpeed * Time.fixedDeltaTime, 0));
 
-            else
+            else if (body.velocity.magnitude < maxVelocity)
                 body.AddForce(new Vector2(HorizontalMovement * moveSpeed * Time.fixedDeltaTime, 0));
         }
         else
@@ -156,30 +180,32 @@ public class PlayerMovement : MonoBehaviour
         }
 
     }
-    public void Move(InputAction.CallbackContext context)
-    {
-        HorizontalMovement = context.ReadValue<Vector2>().x;
-        VerticalMovement = context.ReadValue<Vector2>().y;
-
-    }
     public void Reset()
     {
         GameManager.instance.ResetLevel(transform);
-
     }
-    public void Jump(InputAction.CallbackContext context)
+    private void Jump()
     {
-        if (grounded)
+        if (CanJump)
         {
             body.velocity = new Vector2(body.velocity.x, 0);
             body.AddForce(new Vector2(0, jumpPower));
-            grounded = false;
+            CanJump = false;
+            JumpRequest = false;
         }
+        else
+        {
+            JumpRequest = true;
+        }
+    }
+    public void Jump(InputAction.CallbackContext context)
+    {
+        if (CanDash && context.ReadValue<float>() > 0f)
+            Jump();
     }
 
     public void Dash(InputAction.CallbackContext context)
     {
-        Debug.Log(body.velocity.magnitude);
         if ((CanDash && context.ReadValue<float>() > 0f) || GameManager.instance.godMode)
         {
             body.angularVelocity = 0f;
@@ -197,7 +223,7 @@ public class PlayerMovement : MonoBehaviour
             else
                 body.velocity = newVelocity * body.velocity.magnitude;
 
-            DashExecuted?.Invoke();
+           DashExecuted?.Invoke();
             CanDash = false;
         }
 
@@ -207,7 +233,16 @@ public class PlayerMovement : MonoBehaviour
     {
         if (collision.gameObject.tag == ("Ground"))
         {
-            grounded = true;
+            Grounded = true;
+            CanJump = true;
+        }
+    }
+
+    private void OnCollisionExit2D(Collision2D collision)
+    {
+        if (collision.gameObject.tag == ("Ground"))
+        {
+            Grounded = false;
         }
     }
 
@@ -224,7 +259,8 @@ public class PlayerMovement : MonoBehaviour
         {
             body.gravityScale = 0f;
             body.angularVelocity = 0f;
-            grounded = true;
+            Grounded = false;
+            CanJump = false;
             StuckRemovable = true;
             ExitWaxVelocityMultiplier = collision.GetComponent<MarchingSquares>().expulsionStrength;
 
@@ -235,7 +271,7 @@ public class PlayerMovement : MonoBehaviour
             body.velocity = body.velocity * 0.1f;
             body.angularVelocity = 0f;
             Stuck = true;
-            grounded = true;
+            Grounded = false;
 
         }
     }

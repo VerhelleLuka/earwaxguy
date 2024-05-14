@@ -11,15 +11,14 @@ public class PlayerParticles : MonoBehaviour
     void Start()
     {
         _ParticleSystem = GetComponent<ParticleSystem>();
-        _PlayerMovement = GetComponentInParent<PlayerMovement>();
+        _PlayerMovement = transform.parent.GetComponentInChildren<PlayerMovement>();
     }
 
-    // Update is called once per frame
     void Update()
     {
-        this.transform.localRotation = Quaternion.Inverse(transform.parent.localRotation);
+        this.transform.localRotation = Quaternion.Inverse(transform.parent.localRotation); //Keep particles from rotating with parent
            
-        if((Mathf.Abs(_PlayerMovement.body.velocity.x) < velocityThreshold || !_PlayerMovement.grounded) && !_ParticleSystem.isStopped)
+        if((Mathf.Abs(_PlayerMovement.body.velocity.x) < velocityThreshold || !_PlayerMovement.grounded ||_PlayerMovement.swinging) && !_ParticleSystem.isStopped)
         {
             _ParticleSystem.Stop();
         }
