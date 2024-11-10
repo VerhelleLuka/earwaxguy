@@ -55,6 +55,10 @@ public class PlayerMovement : BaseMovement
     {
         body = GetComponentInParent<Rigidbody2D>();
     }
+
+
+
+
     private bool CheckSwing()
     {
 
@@ -107,7 +111,6 @@ public class PlayerMovement : BaseMovement
 
     private void Update()
     {
-
         if (!CanDash)
         {
             dashCooldownTimer += Time.deltaTime;
