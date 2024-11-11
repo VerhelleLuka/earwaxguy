@@ -5,25 +5,28 @@ using UnityEngine.UI;
 
 public class Dashbar : MonoBehaviour
 {
+
+
     public Image image;
     [SerializeField] private PlayerMovement playerMovement;
     private float cooldownTimer = 1f;
-    
+
     // Start is called before the first frame update
     void Start()
     {
-       image.fillMethod = Image.FillMethod.Horizontal;
+        //Debug.Log("Fiks mij");
+        image.fillMethod = Image.FillMethod.Horizontal;
         image.fillAmount = 1;
     }
 
     // Update is called once per frame
     void Update()
     {
-        if(cooldownTimer < playerMovement.dashCooldown && image.fillAmount < 1)
+        if (cooldownTimer < playerMovement.dashCooldown && image.fillAmount < 1)
         {
             cooldownTimer += Time.deltaTime;
-            image.fillAmount = Mathf.Lerp(0, 1, cooldownTimer/playerMovement.dashCooldown);
-            
+            image.fillAmount = Mathf.Lerp(0, 1, cooldownTimer / playerMovement.dashCooldown);
+
         }
         else
         {
@@ -34,11 +37,11 @@ public class Dashbar : MonoBehaviour
 
     private void OnEnable()
     {
-        playerMovement.DashExecuted += OnDashExecuted;
+        //playerMovement.DashExecuted += OnDashExecuted;
     }
     private void OnDisable()
     {
-        playerMovement.DashExecuted -= OnDashExecuted;
+        //playerMovement.DashExecuted -= OnDashExecuted;
 
     }
 

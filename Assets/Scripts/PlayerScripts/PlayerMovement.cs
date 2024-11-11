@@ -56,9 +56,6 @@ public class PlayerMovement : BaseMovement
         body = GetComponentInParent<Rigidbody2D>();
     }
 
-
-
-
     private bool CheckSwing()
     {
 
