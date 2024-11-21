@@ -9,8 +9,8 @@ public class BetterPlayerMovement : MonoBehaviour
 {
     public float moveAccel = (0.12f * 60.0f);
     public float groundFriction = 0.85f;
-    public float gravity = (-0.05f * 30.0f);
-    public float jumpVel = 0.0075f;
+    public float gravity = (-0.05f * 60.0f);
+
     public float bounceVel = 1.25f;
     public float jumpMinTime = 0.06f;
     public float jumpMaxTime = 0.20f;
@@ -28,9 +28,15 @@ public class BetterPlayerMovement : MonoBehaviour
     private bool m_shootPressed = false;
     private bool m_fireRight = true;
     private bool m_hasWeapon = false;
-    public float m_stateTimer = 0.0f;
+ 
     public float m_bounceTime = 0.1f;
     private List<GameObject> m_groundObjects = new List<GameObject>();
+
+    public List<GameObject> groundObjects
+    {
+        get { return m_groundObjects; }   // get method
+
+    }
 
     public PlayerState m_currentState;
     void Start()
@@ -71,7 +77,7 @@ public class BetterPlayerMovement : MonoBehaviour
 
     public void Jump(InputAction.CallbackContext context)
     {
-        if(context.ReadValue<float>() > 0f)
+        if(context.ReadValue<float>() > 0f && m_groundObjects.Count > 0)
             ChangeState(new JumpingState(this));
        
     }

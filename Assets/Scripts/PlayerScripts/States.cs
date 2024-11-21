@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using static Cinemachine.DocumentationSortingAttribute;
 
 
 public enum State
@@ -28,11 +29,13 @@ public abstract class PlayerState
     public abstract void Exit();
     public abstract void Update();
 
+    public float m_stateTimer = 0.0f;
     //public abstract string GetState();
 }
 
 public class JumpingState : PlayerState
 {
+
     public JumpingState(BetterPlayerMovement player) : base(player) { }
 
     public override void Enter()
@@ -48,20 +51,21 @@ public class JumpingState : PlayerState
 
     public override void Update()
     {
-        player.m_stateTimer += Time.fixedDeltaTime;
+        m_stateTimer += Time.fixedDeltaTime;
+        if (m_stateTimer < player.jumpMinTime)
+            player.vel.y = jumpVel;
 
-        if (player.m_stateTimer < player.jumpMinTime)
-            player.vel.y = player.jumpVel;
+
         if (player.vel.y <= 0)
         {
-            player.m_stateTimer = 0;
-            player.ChangeState(new IdleState(player));
+            m_stateTimer = 0;
+            player.ChangeState(new FallingState(player));
         }
         player.vel.y += player.gravity * Time.fixedDeltaTime;
 
         player.ApplyVelocity();
     }
-    //public override string GetState() { return "Jumping"; }
+    public float jumpVel = 0.575f;
 }
 
 //Idle state
@@ -81,7 +85,10 @@ public class IdleState : PlayerState
 
     public override void Update()
     {
-        
+        if (player.groundObjects.Count == 0)
+        {
+            player.ChangeState(new FallingState(player));
+        }
     }
     //public override string GetState() { return "Idle"; }
 }
@@ -125,7 +132,16 @@ public class FallingState : PlayerState
 
     public override void Update()
     {
+        Debug.Log(player.groundObjects.Count);
+        player.vel.y += player.gravity * Time.fixedDeltaTime;
+        player.vel.y *= player.airFallFriction;
 
+
+        if (player.groundObjects.Count > 0)
+        {
+            player.ChangeState(new IdleState(player));
+        }
+        player.ApplyVelocity();
     }
     //public override string GetState() { return "Falling"; }
 }

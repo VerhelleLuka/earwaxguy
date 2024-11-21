@@ -174,9 +174,11 @@ public class PlayerMovement : BaseMovement
             else if (body.velocity.magnitude < maxVelocity)
                 body.AddForce(new Vector2(HorizontalMovement * moveSpeed * Time.fixedDeltaTime, 0));
         }
-        else
+        else //If player is swinging
         {
-            body.AddForce(new Vector2(HorizontalMovement * moveSpeed * Time.fixedDeltaTime, VerticalMovement * moveSpeed * Time.fixedDeltaTime));
+            Debug.Log("Here");
+            if (body.velocity.magnitude < maxVelocity)
+                body.AddForce(new Vector2(HorizontalMovement * moveSpeed * Time.fixedDeltaTime * 2, 2*  VerticalMovement * moveSpeed * Time.fixedDeltaTime));
         }
 
     }
