@@ -124,11 +124,9 @@ public class PlayerMovement : BaseMovement
         {
             JumpRequestGraceTimer += Time.deltaTime;
             if (JumpRequestGraceTimer < JumpRequestGraceTime && CanJump)
-            {
                 Jump();
 
-            }
-            else if(JumpRequestGraceTimer > JumpRequestGraceTime)
+            else if (JumpRequestGraceTimer > JumpRequestGraceTime)
             {
                 JumpRequestGraceTimer = 0f;
                 JumpRequest = false;
@@ -151,11 +149,27 @@ public class PlayerMovement : BaseMovement
     }
     private void FixedUpdate()
     {
+        Debug.DrawLine(transform.position,
+            new Vector3(transform.position.x + HorizontalMovement,
+            transform.position.y + VerticalMovement,
+            transform.position.z), Color.yellow);
+
+        Debug.DrawLine(transform.position,
+new Vector3(transform.position.x + body.velocity.x,
+transform.position.y + body.velocity.y,
+transform.position.z), Color.blue);
+
         //To check if player input is inverse of player velocity
         if (Stuck)
         {
             body.velocity = new Vector2(HorizontalMovement * moveSpeedStuck * Time.fixedDeltaTime, VerticalMovement * moveSpeedStuck * Time.fixedDeltaTime);
             return;
+        }
+
+        if (dashing)
+        {
+            HorizontalMovement = 0f;
+            VerticalMovement = 0f;
         }
         else if (StuckRemovable)
         {
@@ -176,9 +190,8 @@ public class PlayerMovement : BaseMovement
         }
         else //If player is swinging
         {
-            Debug.Log("Here");
             if (body.velocity.magnitude < maxVelocity)
-                body.AddForce(new Vector2(HorizontalMovement * moveSpeed * Time.fixedDeltaTime * 2, 2*  VerticalMovement * moveSpeed * Time.fixedDeltaTime));
+                body.AddForce(new Vector2(HorizontalMovement * moveSpeed * Time.fixedDeltaTime * 2, 2 * VerticalMovement * moveSpeed * Time.fixedDeltaTime));
         }
 
     }
@@ -211,24 +224,54 @@ public class PlayerMovement : BaseMovement
         if ((CanDash && context.ReadValue<float>() > 0f) || GameManager.instance.godMode)
         {
             body.angularVelocity = 0f;
-            body.velocity = new Vector2(0, 0);
+          
 
             Vector2 newVelocity = new Vector2(HorizontalMovement, VerticalMovement).normalized;
 
+            //check if RMB is used
             if (context.control.name == "rightButton")
             {
                 Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
                 newVelocity = new Vector2((mousePos.x - transform.position.x), (mousePos.y - transform.position.y)).normalized;
             }
-            if (body.velocity.magnitude < dashPower)
-                body.velocity = newVelocity * dashPower;
-            else
-                body.velocity = newVelocity * body.velocity.magnitude;
 
-           DashExecuted?.Invoke();
+            //if (body.velocity.magnitude < dashPower)
+
+
+            Debug.Log(Vector2.Dot(new Vector2(HorizontalMovement, VerticalMovement).normalized, body.velocity.normalized));
+            if (Vector2.Dot(new Vector2(HorizontalMovement, VerticalMovement), body.velocity) > 7)
+            {
+                Debug.Log("DirectionDash");
+                //Dash more quickly for effect
+                StartCoroutine(DirectionDash(newVelocity));
+            }
+            else
+            {
+                body.velocity = newVelocity * dashPower;
+                Debug.Log("NonDirDash");
+
+                body.velocity = newVelocity * body.velocity.magnitude;
+            }
+
+            DashExecuted?.Invoke();
             CanDash = false;
         }
 
+    }
+
+    private const float dashTime = 0.3f;
+    private float dashTimer = 0f;
+    private bool dashing = false;
+
+    private IEnumerator DirectionDash(Vector2 newVel)
+    {
+        //Gravity
+        
+        dashing = true;
+
+        yield return new WaitForSeconds(dashTime);
+        dashing = false;
+        yield return null;
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
