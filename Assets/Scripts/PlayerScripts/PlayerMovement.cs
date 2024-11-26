@@ -10,8 +10,8 @@ public class PlayerMovement : BaseMovement
 {
     public float moveSpeed = 5f;
     public float brakeSpeed = 0.5f;
-    public float jumpPower = 50f;
     public float maxVelocity = 15f;
+    public float jumpPower = 50f;
 
     private bool Grounded = true;
     public bool grounded { get { return Grounded; } }
@@ -50,6 +50,8 @@ public class PlayerMovement : BaseMovement
     private bool JumpRequest = false;
     private const float JumpRequestGraceTime = 0.3f;
     private float JumpRequestGraceTimer = 0f;
+
+    public bool braking = false;
 
     private void Start()
     {
@@ -183,10 +185,19 @@ transform.position.z), Color.blue);
         else if (!Swinging)
         {
             if ((HorizontalMovement < 0 && body.velocity.x > 0) || (HorizontalMovement > 0 && body.velocity.x < 0))
+            {
+                braking = true;
+                body.angularVelocity = 0f;
                 body.AddForce(new Vector2(HorizontalMovement * moveSpeed * brakeSpeed * Time.fixedDeltaTime, 0));
+            }
 
-            else if (body.velocity.magnitude < maxVelocity)
+            else
+            {
                 body.AddForce(new Vector2(HorizontalMovement * moveSpeed * Time.fixedDeltaTime, 0));
+                braking = false;
+            }
+
+            body.velocity = Vector2.ClampMagnitude(body.velocity, maxVelocity);
         }
         else //If player is swinging
         {
@@ -203,8 +214,7 @@ transform.position.z), Color.blue);
     {
         if (CanJump)
         {
-            body.velocity = new Vector2(body.velocity.x, 0);
-            body.AddForce(new Vector2(0, jumpPower));
+
             CanJump = false;
             JumpRequest = false;
         }
@@ -224,7 +234,7 @@ transform.position.z), Color.blue);
         if ((CanDash && context.ReadValue<float>() > 0f) || GameManager.instance.godMode)
         {
             body.angularVelocity = 0f;
-          
+
 
             Vector2 newVelocity = new Vector2(HorizontalMovement, VerticalMovement).normalized;
 
@@ -266,7 +276,7 @@ transform.position.z), Color.blue);
     private IEnumerator DirectionDash(Vector2 newVel)
     {
         //Gravity
-        
+
         dashing = true;
 
         yield return new WaitForSeconds(dashTime);

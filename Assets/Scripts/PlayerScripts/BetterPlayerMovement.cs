@@ -20,7 +20,7 @@ public class BetterPlayerMovement : MonoBehaviour
 
 
 
-    private Rigidbody2D m_rigidBody = null;
+    public Rigidbody2D body = null;
     private bool m_jumpPressed = false;
     private bool m_jumpHeld = false;
     private bool m_wantsRight = false;
@@ -28,9 +28,26 @@ public class BetterPlayerMovement : MonoBehaviour
     private bool m_shootPressed = false;
     private bool m_fireRight = true;
     private bool m_hasWeapon = false;
- 
+
     public float m_bounceTime = 0.1f;
     private List<GameObject> m_groundObjects = new List<GameObject>();
+
+
+    /////MY VAIRABLES
+    private float m_horizontalMovement;
+    private float m_verticalMovement;
+    public float moveSpeed = 5f;
+    public float brakeSpeed = 0.5f;
+    public float maxVelocity = 15f;
+
+    public float horizontalMovement
+    {
+        get { return m_horizontalMovement; }
+    }
+    public float verticalMovement
+    {
+        get { return m_verticalMovement; }
+    }
 
     public List<GameObject> groundObjects
     {
@@ -41,8 +58,8 @@ public class BetterPlayerMovement : MonoBehaviour
     public PlayerState m_currentState;
     void Start()
     {
-        ChangeState(new IdleState(this));
-        m_rigidBody = GetComponent<Rigidbody2D>();
+        ChangeState(new GroundedState(this));
+        body = GetComponent<Rigidbody2D>();
     }
 
 
@@ -50,6 +67,7 @@ public class BetterPlayerMovement : MonoBehaviour
     void Update()
     {
         m_currentState?.Update();
+        //Debug.Log(m_groundObjects.Count);
     }
 
     void ApplyAngularVelocity()
@@ -59,27 +77,45 @@ public class BetterPlayerMovement : MonoBehaviour
 
     public void ApplyVelocity()
     {
-        Vector3 pos = m_rigidBody.transform.position;
-        pos.x += vel.x;
-        pos.y += vel.y;
-        m_rigidBody.transform.position = pos;
+        if (groundObjects.Count == 0)
+        {
+            ChangeState(new FallingState(this));
+        }
+
+        if ((horizontalMovement < 0 && body.velocity.x > 0) || (horizontalMovement > 0 && body.velocity.x < 0))
+        {
+            body.angularVelocity = 0f;
+            body.AddForce(new Vector2(horizontalMovement * moveSpeed * brakeSpeed * Time.fixedDeltaTime, 0));
+        }
+
+        else
+        {
+            body.AddForce(new Vector2(horizontalMovement * moveSpeed * Time.fixedDeltaTime, 0));
+        }
+
+        body.velocity = Vector2.ClampMagnitude(body.velocity, maxVelocity);
     }
 
-    void ApplyGravity()
-    {
-        
-    }
 
-    public string GetCurrentState()
+    public string GetCurrentStateName()
     {
         return m_currentState.GetType().Name;
     }
 
     public void Jump(InputAction.CallbackContext context)
     {
-        if(context.ReadValue<float>() > 0f && m_groundObjects.Count > 0)
+        if (context.ReadValue<float>() > 0f && m_groundObjects.Count > 0 && GetCurrentStateName() != "JumpingState")
+        {
+            Debug.Log(context.ReadValue<float>());
             ChangeState(new JumpingState(this));
-       
+        }
+
+    }
+
+    public void Move(InputAction.CallbackContext context)
+    {
+        m_horizontalMovement = context.ReadValue<Vector2>().x;
+        m_verticalMovement = context.ReadValue<Vector2>().y;
     }
 
     public void ChangeState(PlayerState newState)
@@ -107,7 +143,7 @@ public class BetterPlayerMovement : MonoBehaviour
     private void ProcessCollision(Collision2D collision)
     {
         m_groundObjects.Remove(collision.gameObject);
-        Vector3 pos = m_rigidBody.transform.position;
+        Vector3 pos = body.transform.position;
 
         foreach (ContactPoint2D contact in collision.contacts)
         {
@@ -126,16 +162,12 @@ public class BetterPlayerMovement : MonoBehaviour
                     {
                         m_groundObjects.Add(contact.collider.gameObject);
                     }
-                    if (GetCurrentState() == "FallingState")
+                    if (GetCurrentStateName() == "FallingState")
                     {
                         //If we've been pushed up, we've hit the ground.  Go to a ground-based state.
                         if (m_wantsRight || m_wantsLeft)
-                        {       
-                            ChangeState(new RunningState(this));
-                        }
-                        else
                         {
-                            ChangeState(new IdleState(this));
+                            ChangeState(new GroundedState(this));
                         }
                     }
                 }
@@ -154,6 +186,6 @@ public class BetterPlayerMovement : MonoBehaviour
                 }
             }
         }
-        m_rigidBody.transform.position = pos;
+        body.transform.position = pos;
     }
 }
