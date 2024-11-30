@@ -21,24 +21,25 @@ public class BetterPlayerMovement : MonoBehaviour
 
 
     public Rigidbody2D body = null;
-    private bool m_jumpPressed = false;
-    private bool m_jumpHeld = false;
     private bool m_wantsRight = false;
     private bool m_wantsLeft = false;
-    private bool m_shootPressed = false;
-    private bool m_fireRight = true;
-    private bool m_hasWeapon = false;
 
     public float m_bounceTime = 0.1f;
     private List<GameObject> m_groundObjects = new List<GameObject>();
-
+    public int groundCount = 0;
 
     /////MY VAIRABLES
     private float m_horizontalMovement;
     private float m_verticalMovement;
-    public float moveSpeed = 5f;
+    public float moveSpeed = 15f;
     public float brakeSpeed = 0.5f;
     public float maxVelocity = 15f;
+
+    public bool canDash = false;
+    public float dashCooldown = 0.8f;
+    private float dashCooldownTimer = 0f;
+    private float m_slowDownRate = 0.9f;
+    //public event Action DashExecuted;
 
     public float horizontalMovement
     {
@@ -68,6 +69,28 @@ public class BetterPlayerMovement : MonoBehaviour
     {
         m_currentState?.Update();
         //Debug.Log(m_groundObjects.Count);
+
+        if (!canDash)
+        {
+            dashCooldownTimer += Time.deltaTime;
+            if (dashCooldownTimer >= dashCooldown)
+            {
+                dashCooldownTimer = 0f;
+                canDash = true;
+            }
+        }
+
+
+
+        Debug.DrawLine(transform.position,
+    new Vector3(transform.position.x + m_horizontalMovement,
+    transform.position.y + m_verticalMovement,
+    transform.position.z), Color.yellow);
+
+        Debug.DrawLine(transform.position,
+new Vector3(transform.position.x + body.velocity.x,
+transform.position.y + body.velocity.y,
+transform.position.z), Color.blue);
     }
 
     void ApplyAngularVelocity()
@@ -93,7 +116,8 @@ public class BetterPlayerMovement : MonoBehaviour
             body.AddForce(new Vector2(horizontalMovement * moveSpeed * Time.fixedDeltaTime, 0));
         }
 
-        body.velocity = Vector2.ClampMagnitude(body.velocity, maxVelocity);
+        if (GetCurrentStateName() != "DashState")
+            body.velocity = Vector2.ClampMagnitude(body.velocity, maxVelocity);
     }
 
 
@@ -118,6 +142,15 @@ public class BetterPlayerMovement : MonoBehaviour
         m_verticalMovement = context.ReadValue<Vector2>().y;
     }
 
+    public void Dash(InputAction.CallbackContext context)
+    {
+        if (canDash && context.ReadValue<float>() > 0f)
+        {
+            canDash = false;
+            ChangeState(new DashState(this, context.control.name));
+        }
+    }
+
     public void ChangeState(PlayerState newState)
     {
         m_currentState?.Exit();
@@ -128,16 +161,19 @@ public class BetterPlayerMovement : MonoBehaviour
     private void OnCollisionEnter2D(Collision2D collision)
     {
         ProcessCollision(collision);
+        groundCount = m_groundObjects.Count;
     }
 
     private void OnCollisionExit2D(Collision2D collision)
     {
         m_groundObjects.Remove(collision.gameObject);
+        groundCount = m_groundObjects.Count;
     }
 
     public void ClearCollisions()
     {
         m_groundObjects.Clear();
+        groundCount = m_groundObjects.Count;
     }
 
     private void ProcessCollision(Collision2D collision)

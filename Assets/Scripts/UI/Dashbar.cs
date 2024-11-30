@@ -22,17 +22,17 @@ public class Dashbar : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (cooldownTimer < playerMovement.dashCooldown && image.fillAmount < 1)
-        {
-            cooldownTimer += Time.deltaTime;
-            image.fillAmount = Mathf.Lerp(0, 1, cooldownTimer / playerMovement.dashCooldown);
+        //if (cooldownTimer < playerMovement.dashCooldown && image.fillAmount < 1)
+        //{
+        //    cooldownTimer += Time.deltaTime;
+        //    image.fillAmount = Mathf.Lerp(0, 1, cooldownTimer / playerMovement.dashCooldown);
 
-        }
-        else
-        {
-            image.color = Color.green;
-            cooldownTimer = 0f;
-        }
+        //}
+        //else
+        //{
+        //    image.color = Color.green;
+        //    cooldownTimer = 0f;
+        //}
     }
 
     private void OnEnable()
