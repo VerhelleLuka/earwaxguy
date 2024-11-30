@@ -36,7 +36,7 @@ public class BetterPlayerMovement : MonoBehaviour
     public float maxVelocity = 15f;
 
     public bool canDash = false;
-    public float dashCooldown = 0.8f;
+    public float dashCooldown = 1.5f;
     private float dashCooldownTimer = 0f;
     private float m_slowDownRate = 0.9f;
     //public event Action DashExecuted;

@@ -2813,6 +2813,10 @@ PrefabInstance:
       propertyPath: maxVelocity
       value: 12
       objectReference: {fileID: 0}
+    - target: {fileID: 68599687203435061, guid: 9236f9a07374e6f4aa49cf061769ff69, type: 3}
+      propertyPath: dashCooldown
+      value: 1.2
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
