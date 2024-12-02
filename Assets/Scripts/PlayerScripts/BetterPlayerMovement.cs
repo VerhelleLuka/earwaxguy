@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using static Cinemachine.DocumentationSortingAttribute;
@@ -35,11 +36,23 @@ public class BetterPlayerMovement : MonoBehaviour
     public float brakeSpeed = 0.5f;
     public float maxVelocity = 15f;
 
+    //dash
     public bool canDash = false;
     public float dashCooldown = 1.5f;
     private float dashCooldownTimer = 0f;
-    private float m_slowDownRate = 0.9f;
-    //public event Action DashExecuted;
+
+    //swing
+    public Vector2 swingPosition = new Vector2();
+    public float swingRotationOffset = -90f;//In degrees
+    public float angularVelocityBeforeSwing = 0f;
+    private bool CanSwing = false;
+    private bool Swinging = false;
+    public bool swinging { get { return Swinging; } }
+    private bool TryingToSwing = false;
+    //arms
+    public LineRenderer lineRenderer;
+    public DistanceJoint2D springJoint;
+
 
     public float horizontalMovement
     {
@@ -80,6 +93,19 @@ public class BetterPlayerMovement : MonoBehaviour
             }
         }
 
+        if (GetCurrentStateName() != "SwingingState" && CanSwing)
+        {
+            Vector3 playerPos = transform.position;
+            playerPos.z = 0f;
+            Vector3 swingPos = swingPosition;
+            //Draw line halfway between player and swing
+            Vector3 lineRendererPos = playerPos + 0.5f * (swingPos - playerPos);
+            lineRendererPos.z = -1f;
+            lineRenderer.SetPosition(0, lineRendererPos);
+
+            lineRenderer.SetPosition(1, new Vector3(transform.position.x, transform.position.y, -1f));
+        }
+
 
 
         Debug.DrawLine(transform.position,
@@ -100,6 +126,12 @@ transform.position.z), Color.blue);
 
     public void ApplyVelocity()
     {
+        if (GetCurrentStateName() == "SwingingState")
+        {
+            if (body.velocity.magnitude < maxVelocity)
+                body.AddForce(new Vector2(horizontalMovement * moveSpeed * Time.fixedDeltaTime * 2, 2 * verticalMovement * moveSpeed * Time.fixedDeltaTime));
+            return;
+        }
         if (groundObjects.Count == 0)
         {
             ChangeState(new FallingState(this));
@@ -136,6 +168,24 @@ transform.position.z), Color.blue);
 
     }
 
+    public void Swing(InputAction.CallbackContext context)
+    {
+        TryingToSwing = context.ReadValue<float>() > 0f ? true : false;
+
+        if (!TryingToSwing)
+        {
+            Swinging = false;
+            Destroy(springJoint);
+            body.angularVelocity = angularVelocityBeforeSwing;
+            lineRenderer.enabled = false;
+            ChangeState(new GroundedState(this));
+        }
+        else if (CanSwing)
+        {
+            ChangeState(new SwingingState(this));
+        }
+    }
+
     public void Move(InputAction.CallbackContext context)
     {
         m_horizontalMovement = context.ReadValue<Vector2>().x;
@@ -156,6 +206,27 @@ transform.position.z), Color.blue);
         m_currentState?.Exit();
         m_currentState = newState;
         m_currentState.Enter();
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.gameObject.tag == "Swing")
+        {
+            lineRenderer.enabled = true;
+            CanSwing = true;
+            swingPosition = collision.transform.position;
+        }
+    }
+
+    private void OnTriggerExit2D(Collider2D collision)
+    {
+        if (collision.gameObject.tag == ("Swing"))
+        {
+            CanSwing = false;
+
+            lineRenderer.enabled = false;
+
+        }
     }
 
     private void OnCollisionEnter2D(Collision2D collision)

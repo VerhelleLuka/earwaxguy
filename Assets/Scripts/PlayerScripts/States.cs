@@ -17,7 +17,8 @@ public enum State
     Digging,
     Stuck,
     Dash,
-    Braking
+    Braking, 
+    Swinging
 }
 
 public abstract class PlayerState
@@ -128,6 +129,46 @@ public class FallingState : PlayerState
         player.ApplyVelocity();
     }
     //public override string GetState() { return "Falling"; }
+}
+
+public class SwingingState : PlayerState
+{
+    public SwingingState(BetterPlayerMovement player) : base(player) { }
+
+    public override void Enter()
+    {
+        //Debug.Log("Entering Swinging State");
+        player.lineRenderer.enabled = true;
+
+        if (player.springJoint == null)
+        {
+            player.springJoint = player.gameObject.AddComponent<DistanceJoint2D>();
+            player.springJoint.connectedAnchor = player.swingPosition;
+            player.springJoint.distance = Vector2.Distance(player.swingPosition, player.gameObject.transform.position);
+            player.springJoint.enableCollision = false;
+        }
+
+
+    }
+
+    public override void Exit()
+    {
+        //Debug.Log("Exiting Idle State");
+    }
+
+    public override void Update()
+    {
+        Vector3 relativePos = new Vector3(player.swingPosition.x, player.swingPosition.y, 0) - player.transform.position;
+        float angle = Mathf.Atan2(relativePos.y, relativePos.x) * Mathf.Rad2Deg;
+        angle += player.swingRotationOffset;
+        player.transform.rotation = Quaternion.Euler(new Vector3(0, 0, angle));
+        player.lineRenderer.SetPosition(1, new Vector3(player.transform.position.x, player.transform.position.y, -1f));
+
+        player.lineRenderer.SetPosition(0, new Vector3(player.swingPosition.x, player.swingPosition.y, -1f));
+        player.angularVelocityBeforeSwing = player.body.angularVelocity;
+
+        player.ApplyVelocity();
+    }
 }
 
 public class DiggingState : PlayerState
