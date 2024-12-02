@@ -151,15 +151,6 @@ public class PlayerMovement : BaseMovement
     }
     private void FixedUpdate()
     {
-        Debug.DrawLine(transform.position,
-            new Vector3(transform.position.x + HorizontalMovement,
-            transform.position.y + VerticalMovement,
-            transform.position.z), Color.yellow);
-
-        Debug.DrawLine(transform.position,
-new Vector3(transform.position.x + body.velocity.x,
-transform.position.y + body.velocity.y,
-transform.position.z), Color.blue);
 
         //To check if player input is inverse of player velocity
         if (Stuck)

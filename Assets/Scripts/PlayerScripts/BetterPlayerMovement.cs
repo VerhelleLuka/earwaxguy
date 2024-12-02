@@ -182,6 +182,7 @@ transform.position.z), Color.blue);
         }
         else if (CanSwing)
         {
+            lineRenderer.enabled = true;
             ChangeState(new SwingingState(this));
         }
     }
@@ -224,8 +225,8 @@ transform.position.z), Color.blue);
         {
             CanSwing = false;
 
-            lineRenderer.enabled = false;
-
+            if (GetCurrentStateName() != "SwingingState")
+                lineRenderer.enabled = false;
         }
     }
 

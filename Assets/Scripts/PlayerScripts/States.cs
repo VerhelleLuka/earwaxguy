@@ -46,14 +46,14 @@ public class JumpingState : PlayerState
 
     public override void Enter()
     {
-        Debug.Log("Entering Jumping State");
+        //Debug.Log("Entering Jumping State");
         player.body.velocity = new Vector2(player.body.velocity.x, 0);
         player.body.AddForce(new Vector2(0, jumpPower));
     }
 
     public override void Exit()
     {
-        Debug.Log("Exiting Jumping State");
+        //Debug.Log("Exiting Jumping State");
     }
 
     public override void Update()
@@ -88,7 +88,7 @@ public class GroundedState : PlayerState
 
     public override void Enter()
     {
-       Debug.Log("Entering Idle State");
+       //Debug.Log("Entering Idle State");
     }
 
     public override void Exit()
@@ -110,7 +110,7 @@ public class FallingState : PlayerState
 
     public override void Enter()
     {
-        Debug.Log("Entering Falling State");
+        //Debug.Log("Entering Falling State");
     }
 
     public override void Exit()
@@ -137,7 +137,7 @@ public class SwingingState : PlayerState
 
     public override void Enter()
     {
-        //Debug.Log("Entering Swinging State");
+        Debug.Log("Entering Swinging State");
         player.lineRenderer.enabled = true;
 
         if (player.springJoint == null)
@@ -148,12 +148,14 @@ public class SwingingState : PlayerState
             player.springJoint.enableCollision = false;
         }
 
+        player.lineRenderer.SetPosition(0, new Vector3(player.swingPosition.x, player.swingPosition.y, -1f));
 
     }
-
+    private float exitForce = 5f;
     public override void Exit()
     {
-        //Debug.Log("Exiting Idle State");
+        player.body.AddForce(player.body.velocity.normalized * exitForce);
+        Debug.Log("Exiting Swing State");
     }
 
     public override void Update()
@@ -164,7 +166,6 @@ public class SwingingState : PlayerState
         player.transform.rotation = Quaternion.Euler(new Vector3(0, 0, angle));
         player.lineRenderer.SetPosition(1, new Vector3(player.transform.position.x, player.transform.position.y, -1f));
 
-        player.lineRenderer.SetPosition(0, new Vector3(player.swingPosition.x, player.swingPosition.y, -1f));
         player.angularVelocityBeforeSwing = player.body.angularVelocity;
 
         player.ApplyVelocity();
