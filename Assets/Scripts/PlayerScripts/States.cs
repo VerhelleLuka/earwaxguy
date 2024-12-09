@@ -230,6 +230,7 @@ public class DashState : PlayerState
         Debug.Log("Entering Dash State");
         player.body.angularVelocity = 0f;
 
+        player.qtip.SetActive(true);
 
         Vector2 newVelocity = new Vector2(player.horizontalMovement , player.verticalMovement).normalized;
 
@@ -272,11 +273,12 @@ public class DashState : PlayerState
 
     public override void Exit()
     {
-        //Debug.Log("Exiting Idle State");
+        Debug.Log("Exiting Dash State");
     }
 
     public override void Update()
     {
+        player.qtip.transform.rotation = Quaternion.Euler(0,0,Mathf.Atan2(player.body.velocity.y, player.body.velocity.x) * Mathf.Rad2Deg);
         m_dashTimer += Time.deltaTime;
 
         if(m_dashTimer >= m_dashTime)
@@ -289,8 +291,13 @@ public class DashState : PlayerState
             else
                 player.ChangeState(new FallingState(player));
         }
+        if(m_dashTimer > m_qtipTime)
+        {
+            player.qtip.SetActive(false);
+        }
     }
     private const float m_dashTime = 0.8f;
+    private const float m_qtipTime = 0.4f;
     private float m_dashTimer = 0f;
 
 }

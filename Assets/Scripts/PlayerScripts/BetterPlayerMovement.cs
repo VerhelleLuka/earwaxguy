@@ -44,6 +44,8 @@ public class BetterPlayerMovement : MonoBehaviour
     public float dashCooldown = 1.5f;
     private float dashCooldownTimer = 0f;
 
+    public GameObject qtip;
+
     //swing
     public Vector2 swingPosition = new Vector2();
     public float swingRotationOffset = -90f;//In degrees
