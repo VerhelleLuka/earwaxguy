@@ -33,8 +33,11 @@ public class BetterPlayerMovement : MonoBehaviour
     private float m_horizontalMovement;
     private float m_verticalMovement;
     public float moveSpeed = 15f;
+
+    //brakes
     public float brakeSpeed = 0.5f;
     public float maxVelocity = 15f;
+    public float slowDownRate = 5f;
 
     //dash
     public bool canDash = false;
@@ -89,7 +92,7 @@ public class BetterPlayerMovement : MonoBehaviour
             if (dashCooldownTimer >= dashCooldown)
             {
                 dashCooldownTimer = 0f;
-                canDash = true;
+               // canDash = true;
             }
         }
 
@@ -149,7 +152,9 @@ transform.position.z), Color.blue);
         }
 
         if (GetCurrentStateName() != "DashState")
-            body.velocity = Vector2.ClampMagnitude(body.velocity, maxVelocity);
+        {
+           body.velocity = Vector2.ClampMagnitude(body.velocity, maxVelocity);
+        }
     }
 
 

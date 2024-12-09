@@ -49,6 +49,7 @@ public class JumpingState : PlayerState
         //Debug.Log("Entering Jumping State");
         player.body.velocity = new Vector2(player.body.velocity.x, 0);
         player.body.AddForce(new Vector2(0, jumpPower));
+        player.canDash = true;
     }
 
     public override void Exit()
@@ -98,6 +99,8 @@ public class GroundedState : PlayerState
 
     public override void Update()
     {
+        player.canDash = true;
+
         player.ApplyVelocity();
     }
     //public override string GetState() { return "Idle"; }
@@ -155,11 +158,12 @@ public class SwingingState : PlayerState
     public override void Exit()
     {
         player.body.AddForce(player.body.velocity.normalized * exitForce);
-        Debug.Log("Exiting Swing State");
+        player.canDash = true;
     }
 
     public override void Update()
     {
+        player.canDash = false;
         Vector3 relativePos = new Vector3(player.swingPosition.x, player.swingPosition.y, 0) - player.transform.position;
         float angle = Mathf.Atan2(relativePos.y, relativePos.x) * Mathf.Rad2Deg;
         angle += player.swingRotationOffset;

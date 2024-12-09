@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 595eae6ecb16bb449af1fda0c6396a45
+guid: 16cd3dd2b26d45e4c83ff05ece3de564
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 5254265072666585329
-    second: Collectible1_0
+      213: 5533232503652058630
+    second: Collectible1-removebg-preview_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -100,13 +100,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Collectible1_0
+      name: Collectible1-removebg-preview_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 1410
-        height: 1049
+        x: 87
+        y: 80
+        width: 350
+        height: 280
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -114,8 +114,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 1f8a80cce36eae840800000000000000
-      internalID: 5254265072666585329
+      spriteID: 60683df45adf9cc40800000000000000
+      internalID: 5533232503652058630
       vertices: []
       indices: 
       edges: []
@@ -130,8 +130,7 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable:
-      Collectible1_0: 5254265072666585329
+    nameFileIdTable: {}
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
