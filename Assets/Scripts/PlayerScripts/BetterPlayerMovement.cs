@@ -8,16 +8,7 @@ using static Cinemachine.DocumentationSortingAttribute;
 
 public class BetterPlayerMovement : MonoBehaviour
 {
-    public float moveAccel = (0.12f * 60.0f);
-    public float groundFriction = 0.85f;
-    public float gravity = (-0.05f * 60.0f);
 
-    public float bounceVel = 1.25f;
-    public float jumpMinTime = 0.06f;
-    public float jumpMaxTime = 0.20f;
-    public float airFallFriction = 0.975f;
-    public float airMoveFriction = 0.85f;
-    public Vector2 vel = new Vector2(0, 0);
 
 
 
@@ -32,11 +23,10 @@ public class BetterPlayerMovement : MonoBehaviour
     /////MY VAIRABLES
     private float m_horizontalMovement;
     private float m_verticalMovement;
-    public float moveSpeed = 15f;
 
     //brakes
     public float brakeSpeed = 0.5f;
-    public float maxVelocity = 15f;
+ 
     public float slowDownRate = 5f;
 
     //dash
@@ -58,6 +48,13 @@ public class BetterPlayerMovement : MonoBehaviour
     public LineRenderer lineRenderer;
     public DistanceJoint2D springJoint;
 
+    //States
+
+    private PlayerState m_currentState;
+
+    public PlayerState previousState;
+
+
 
     public float horizontalMovement
     {
@@ -74,7 +71,6 @@ public class BetterPlayerMovement : MonoBehaviour
 
     }
 
-    public PlayerState m_currentState;
     void Start()
     {
         ChangeState(new GroundedState(this));
@@ -86,7 +82,6 @@ public class BetterPlayerMovement : MonoBehaviour
     void Update()
     {
         m_currentState?.Update();
-        //Debug.Log(m_groundObjects.Count);
 
         if (!canDash)
         {
@@ -94,7 +89,7 @@ public class BetterPlayerMovement : MonoBehaviour
             if (dashCooldownTimer >= dashCooldown)
             {
                 dashCooldownTimer = 0f;
-               // canDash = true;
+                // canDash = true;
             }
         }
 
@@ -110,54 +105,8 @@ public class BetterPlayerMovement : MonoBehaviour
 
             lineRenderer.SetPosition(1, new Vector3(transform.position.x, transform.position.y, -1f));
         }
-
-
-
-        Debug.DrawLine(transform.position,
-    new Vector3(transform.position.x + m_horizontalMovement,
-    transform.position.y + m_verticalMovement,
-    transform.position.z), Color.yellow);
-
-        Debug.DrawLine(transform.position,
-new Vector3(transform.position.x + body.velocity.x,
-transform.position.y + body.velocity.y,
-transform.position.z), Color.blue);
     }
 
-    void ApplyAngularVelocity()
-    {
-
-    }
-
-    public void ApplyVelocity()
-    {
-        if (GetCurrentStateName() == "SwingingState")
-        {
-            if (body.velocity.magnitude < maxVelocity)
-                body.AddForce(new Vector2(horizontalMovement * moveSpeed * Time.fixedDeltaTime * 2, 2 * verticalMovement * moveSpeed * Time.fixedDeltaTime));
-            return;
-        }
-        if (groundObjects.Count == 0)
-        {
-            ChangeState(new FallingState(this));
-        }
-
-        if ((horizontalMovement < 0 && body.velocity.x > 0) || (horizontalMovement > 0 && body.velocity.x < 0))
-        {
-            body.angularVelocity = 0f;
-            body.AddForce(new Vector2(horizontalMovement * moveSpeed * brakeSpeed * Time.fixedDeltaTime, 0));
-        }
-
-        else
-        {
-            body.AddForce(new Vector2(horizontalMovement * moveSpeed * Time.fixedDeltaTime, 0));
-        }
-
-        if (GetCurrentStateName() != "DashState")
-        {
-           body.velocity = Vector2.ClampMagnitude(body.velocity, maxVelocity);
-        }
-    }
 
 
     public string GetCurrentStateName()
@@ -167,9 +116,8 @@ transform.position.z), Color.blue);
 
     public void Jump(InputAction.CallbackContext context)
     {
-        if (context.ReadValue<float>() > 0f && m_groundObjects.Count > 0 && GetCurrentStateName() != "JumpingState")
+        if (context.ReadValue<float>() > 0f && (GetCurrentStateName() == "WallRunState" || m_groundObjects.Count > 0) && GetCurrentStateName() != "JumpingState")
         {
-            Debug.Log(context.ReadValue<float>());
             ChangeState(new JumpingState(this));
         }
 
@@ -211,6 +159,10 @@ transform.position.z), Color.blue);
 
     public void ChangeState(PlayerState newState)
     {
+        if (m_currentState != null)
+            previousState = m_currentState;
+        else
+            previousState =newState;
         m_currentState?.Exit();
         m_currentState = newState;
         m_currentState.Enter();
@@ -241,12 +193,32 @@ transform.position.z), Color.blue);
     {
         ProcessCollision(collision);
         groundCount = m_groundObjects.Count;
+
+        if (collision.transform.CompareTag("RunnableWall"))
+        {
+            ChangeState(new WallRunState(this));
+        }
     }
 
     private void OnCollisionExit2D(Collision2D collision)
     {
         m_groundObjects.Remove(collision.gameObject);
         groundCount = m_groundObjects.Count;
+
+        bool wallRunning = false;
+        foreach (GameObject Object in m_groundObjects)
+        {
+
+            if (Object.CompareTag("RunnableWall"))
+            {
+                wallRunning = true;
+            }
+        }
+        if (!wallRunning)
+        {
+            //ChangeState(new FallingState(this));
+        }
+        //Debug.Log(wallRunning);
     }
 
     public void ClearCollisions()
@@ -257,6 +229,7 @@ transform.position.z), Color.blue);
 
     private void ProcessCollision(Collision2D collision)
     {
+
         m_groundObjects.Remove(collision.gameObject);
         Vector3 pos = body.transform.position;
 
@@ -288,18 +261,11 @@ transform.position.z), Color.blue);
                 }
                 //Hit Roof
                 else
-                {
-                    vel.y = 0;
+
                     ChangeState(new FallingState(this));
-                }
+
             }
-            else
-            {
-                if ((contact.normal.x > 0 && vel.x < 0) || (contact.normal.x < 0 && vel.x > 0))
-                {
-                    vel.x = 0;
-                }
-            }
+
         }
         body.transform.position = pos;
     }

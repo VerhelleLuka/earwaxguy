@@ -17,7 +17,7 @@ public enum State
     Digging,
     Stuck,
     Dash,
-    Braking, 
+    Braking,
     Swinging
 }
 
@@ -35,6 +35,8 @@ public abstract class PlayerState
     public abstract void Update();
 
     public float stateTimer = 0.0f;
+    public const float maxVelocity = 15f;
+    public const float moveSpeed = 75f;
 
     // public abstract PlayerState GetState();
 }
@@ -42,14 +44,40 @@ public abstract class PlayerState
 public class JumpingState : PlayerState
 {
 
-    public JumpingState(BetterPlayerMovement player) : base(player) { }
+    public JumpingState(BetterPlayerMovement player) : base(player)
+    {
+
+    }
 
     public override void Enter()
     {
-        //Debug.Log("Entering Jumping State");
-        player.body.velocity = new Vector2(player.body.velocity.x, 0);
-        player.body.AddForce(new Vector2(0, jumpPower));
+        Debug.Log("Entering Jumping State");
+
+        Vector2 newJumpDir = Vector2.zero;
+
+
+        if (player.previousState.GetType().Name != "WallRunState")
+        {
+            player.body.velocity = new Vector2(player.body.velocity.x, 0);
+            player.body.AddForce(new Vector2(0, jumpPower));
+
+        }
+
+        else if (player.horizontalMovement < 0)
+        {
+            newJumpDir = new Vector2(player.body.velocity.y, -1 * player.body.velocity.x).normalized * jumpPower;//90 degrees clockwise rotation
+            player.body.AddForce(new Vector2(newJumpDir.x, newJumpDir.y));
+        }
+
+        else if (player.horizontalMovement > 0)
+        {
+            newJumpDir = new Vector2(player.body.velocity.y * -1, player.body.velocity.x).normalized * jumpPower;//90 degrees counterclockwise rotation
+
+            player.body.AddForce(new Vector2(newJumpDir.x, newJumpDir.y));
+        }
         player.canDash = true;
+
+
     }
 
     public override void Exit()
@@ -60,20 +88,27 @@ public class JumpingState : PlayerState
     public override void Update()
     {
 
-        //m_stateTimer += Time.fixedDeltaTime;
-        //if (m_stateTimer < player.jumpMinTime)
+        stateTimer += Time.fixedDeltaTime;
+
         //    player.body.AddForce(new Vector2(0, jumpPower / 2));
 
 
-        if (player.body.velocityY <= 0)
+        if (player.body.velocityY <= 0 && player.previousState.GetType().Name != "WallRunState")
         {
-            stateTimer = 0;
+            player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * Time.fixedDeltaTime * 0.75f, 0));
+
             player.ChangeState(new FallingState(player));
         }
-        //player.vel.y += player.gravity * Time.fixedDeltaTime;
+        else if (stateTimer > m_wallRunJumpDelay && player.previousState.GetType().Name == "WallRunState")
+        {
+            stateTimer = 0;
 
-        player.ApplyVelocity();
+            player.ChangeState(new FallingState(player));
+
+        }
+
     }
+    private float m_wallRunJumpDelay = 1f;
     public float jumpVel = 0.575f;
     public float jumpPower = 350f;
 
@@ -89,7 +124,7 @@ public class GroundedState : PlayerState
 
     public override void Enter()
     {
-       //Debug.Log("Entering Idle State");
+        //Debug.Log("Entering Idle State");
     }
 
     public override void Exit()
@@ -97,13 +132,109 @@ public class GroundedState : PlayerState
         //Debug.Log("Exiting Idle State");
     }
 
+    private float m_pushDownForce = 4f;
+
     public override void Update()
     {
         player.canDash = true;
 
-        player.ApplyVelocity();
+        if (player.groundObjects.Count == 0)
+        {
+            player.ChangeState(new FallingState(player));
+        }
+
+        else if ((player.horizontalMovement < 0 && player.body.velocity.x > 0) || (player.horizontalMovement > 0 && player.body.velocity.x < 0))
+        {
+            player.body.angularVelocity = 0f;
+            player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * player.brakeSpeed * Time.fixedDeltaTime, 0));
+        }
+
+        else
+        {
+            player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * Time.fixedDeltaTime, 0));
+        }
+       // player.body.velocity = new Vector2(Mathf.Clamp(player.body.velocity.x, maxVelocity * -1, maxVelocity), player.body.velocity.y);
     }
     //public override string GetState() { return "Idle"; }
+}
+
+public class WallRunState : PlayerState
+{
+    private Vector2 wallNormal = Vector2.zero;
+    private int layerMask = LayerMask.GetMask("RunnableWall");
+    public WallRunState(BetterPlayerMovement player) : base(player) { }
+
+    public override void Enter()
+    {
+        // Debug.Log("Entering Wallrun State");
+        player.body.gravityScale = 0;
+    }
+
+    public override void Exit()
+    {
+        // Debug.Log("Exiting Wallrun State");
+        player.body.gravityScale = 1.5f;
+
+    }
+
+
+    public override void Update()
+    {
+
+
+        Vector3 p1 = player.transform.position;
+
+        RaycastHit2D hit = Physics2D.Raycast(player.transform.position, wallNormal * -1, 0.5f, layerMask);
+
+        if (wallNormal == Vector2.zero)
+            hit = Physics2D.CircleCast(p1, 1, new Vector2(1, 0).normalized, 0.5f, layerMask);
+        //hit = Physics2D.Raycast(player.transform.position, Vector2.down, 2f, layerMask);
+
+        ApplyWallRunVelocity(wallNormal * -1);
+        if (hit)
+        {
+            wallNormal = hit.normal;
+
+            player.body.AddForce(wallNormal * -30);
+
+        }
+        else
+            player.ChangeState(new FallingState(player));
+
+
+        Debug.DrawLine(player.transform.position,
+    new Vector3(player.transform.position.x + wallNormal.x,
+   player.transform.position.y + wallNormal.y,
+    player.transform.position.z), Color.blue);
+        Debug.DrawLine(player.transform.position,
+    new Vector3(player.transform.position.x + wallNormal.x * -1,
+   player.transform.position.y + wallNormal.y * -1,
+    player.transform.position.z), Color.red);
+    }
+
+    public void ApplyWallRunVelocity(Vector2 playerDownDirection)
+    {
+
+        Vector2 newMovementDir = Vector2.zero;
+        if (player.horizontalMovement < 0)
+        {
+            newMovementDir = new Vector2(playerDownDirection.y, -1 * playerDownDirection.x);//90 degrees clockwise rotation
+            player.body.AddForce(new Vector2(newMovementDir.normalized.x * moveSpeed * Time.fixedDeltaTime, newMovementDir.normalized.y * moveSpeed * Time.fixedDeltaTime));
+        }
+        else if (player.horizontalMovement > 0)
+        {
+            newMovementDir = new Vector2(playerDownDirection.y * -1, playerDownDirection.x);//90 degrees counterclockwise rotation
+            player.body.AddForce(new Vector2(newMovementDir.normalized.x * moveSpeed * Time.fixedDeltaTime, newMovementDir.normalized.y * moveSpeed * Time.fixedDeltaTime));
+        }
+        player.body.velocity = Vector2.ClampMagnitude(player.body.velocity, maxVelocity * maxVelMult );
+
+        Debug.DrawLine(player.transform.position,
+new Vector3(player.transform.position.x + newMovementDir.x,
+player.transform.position.y + newMovementDir.y,
+player.transform.position.z), Color.yellow);
+    }
+
+    private const float maxVelMult = 1.3f;
 }
 
 
@@ -129,7 +260,8 @@ public class FallingState : PlayerState
         {
             player.ChangeState(new GroundedState(player));
         }
-        player.ApplyVelocity();
+        player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * Time.fixedDeltaTime * 0.75f, 0));
+
     }
     //public override string GetState() { return "Falling"; }
 }
@@ -172,7 +304,8 @@ public class SwingingState : PlayerState
 
         player.angularVelocityBeforeSwing = player.body.angularVelocity;
 
-        player.ApplyVelocity();
+        if (player.body.velocity.magnitude < maxVelocity)
+            player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * Time.fixedDeltaTime * 2, 2 * player.verticalMovement * moveSpeed * Time.fixedDeltaTime));
     }
 }
 
@@ -227,21 +360,20 @@ public class DashState : PlayerState
     private const float m_dashPower = 10f;
     public override void Enter()
     {
-        Debug.Log("Entering Dash State");
+        //Debug.Log("Entering Dash State");
         player.body.angularVelocity = 0f;
 
         player.qtip.SetActive(true);
 
-        Vector2 newVelocity = new Vector2(player.horizontalMovement , player.verticalMovement).normalized;
+        Vector2 newVelocity = new Vector2(player.horizontalMovement, player.verticalMovement).normalized;
 
         //check if RMB is used
         if (m_btnUsed == "rightButton")
         {
             Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             Vector2 normalizedVector = mousePos - player.transform.position;
-            
+
             newVelocity = normalizedVector.normalized;
-            //newVelocity = new Vector2((mousePos.x - player.transform.position.x), (mousePos.y - player.transform.position.y)).normalized;
             Debug.Log(Vector2.Dot(normalizedVector.normalized, player.body.velocity.normalized));
 
             if (Vector2.Dot(normalizedVector.normalized, player.body.velocity.normalized) > 0)
@@ -257,8 +389,7 @@ public class DashState : PlayerState
 
             return;
         }
-        
-  //      Debug.Log(Vector2.Dot(new Vector2(player.horizontalMovement, player.verticalMovement).normalized, player.body.velocity.normalized));
+
         if (Vector2.Dot(new Vector2(player.horizontalMovement, player.verticalMovement).normalized, player.body.velocity.normalized) > 0)
             player.body.velocity = newVelocity * m_dashPower + player.body.velocity;
         else
@@ -273,15 +404,16 @@ public class DashState : PlayerState
 
     public override void Exit()
     {
-        Debug.Log("Exiting Dash State");
+        player.qtip.SetActive(false);
+        //Debug.Log("Exiting Dash State");
     }
 
     public override void Update()
     {
-        player.qtip.transform.rotation = Quaternion.Euler(0,0,Mathf.Atan2(player.body.velocity.y, player.body.velocity.x) * Mathf.Rad2Deg);
+        player.qtip.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(player.body.velocity.y, player.body.velocity.x) * Mathf.Rad2Deg);
         m_dashTimer += Time.deltaTime;
 
-        if(m_dashTimer >= m_dashTime)
+        if (m_dashTimer >= m_dashTime)
         {
             m_dashTimer = 0;
             if (player.groundCount > 0)
@@ -291,7 +423,7 @@ public class DashState : PlayerState
             else
                 player.ChangeState(new FallingState(player));
         }
-        if(m_dashTimer > m_qtipTime)
+        if (m_dashTimer > m_qtipTime)
         {
             player.qtip.SetActive(false);
         }

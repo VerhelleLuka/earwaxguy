@@ -27,8 +27,5 @@ public class PlayerParticles : MonoBehaviour
             _ParticleSystem.Play();
         }
 
-        
-       
-
     }
 }
