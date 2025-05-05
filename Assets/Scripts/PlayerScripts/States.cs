@@ -38,6 +38,7 @@ public abstract class PlayerState
     public const float maxVelocity = 15f;
     public const float moveSpeed = 75f;
 
+    public static Vector2 wallNormal;
     // public abstract PlayerState GetState();
 }
 
@@ -63,18 +64,24 @@ public class JumpingState : PlayerState
 
         }
 
-        else if (player.horizontalMovement < 0)
+        //WALL RUN JUMP
+        else
         {
-            newJumpDir = new Vector2(player.body.velocity.y, -1 * player.body.velocity.x).normalized * jumpPower;//90 degrees clockwise rotation
+            newJumpDir = wallNormal * jumpPower;
             player.body.AddForce(new Vector2(newJumpDir.x, newJumpDir.y));
         }
+        //else if (player.horizontalMovement < 0)
+        //{
+        //    newJumpDir = new Vector2(player.body.velocity.y, -1 * player.body.velocity.x).normalized * jumpPower;//90 degrees clockwise rotation
+        //    player.body.AddForce(new Vector2(newJumpDir.x, newJumpDir.y));
+        //}
 
-        else if (player.horizontalMovement > 0)
-        {
-            newJumpDir = new Vector2(player.body.velocity.y * -1, player.body.velocity.x).normalized * jumpPower;//90 degrees counterclockwise rotation
+        //else if (player.horizontalMovement > 0)
+        //{
+        //    newJumpDir = new Vector2(player.body.velocity.y * -1, player.body.velocity.x).normalized * jumpPower;//90 degrees counterclockwise rotation
 
-            player.body.AddForce(new Vector2(newJumpDir.x, newJumpDir.y));
-        }
+        //    player.body.AddForce(new Vector2(newJumpDir.x, newJumpDir.y));
+        //}
         player.canDash = true;
 
 
@@ -95,7 +102,7 @@ public class JumpingState : PlayerState
 
         if (player.body.velocityY <= 0 && player.previousState.GetType().Name != "WallRunState")
         {
-            player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * Time.fixedDeltaTime * 0.75f, 0));
+            player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * Time.fixedDeltaTime , 0));
 
             player.ChangeState(new FallingState(player));
         }
@@ -110,7 +117,7 @@ public class JumpingState : PlayerState
     }
     private float m_wallRunJumpDelay = 1f;
     public float jumpVel = 0.575f;
-    public float jumpPower = 350f;
+    public float jumpPower = 400f;
 
 
 }
@@ -160,7 +167,6 @@ public class GroundedState : PlayerState
 
 public class WallRunState : PlayerState
 {
-    private Vector2 wallNormal = Vector2.zero;
     private int layerMask = LayerMask.GetMask("RunnableWall");
     public WallRunState(BetterPlayerMovement player) : base(player) { }
 
@@ -168,6 +174,7 @@ public class WallRunState : PlayerState
     {
         // Debug.Log("Entering Wallrun State");
         player.body.gravityScale = 0;
+        player.canDash = true;
     }
 
     public override void Exit()
@@ -195,7 +202,7 @@ public class WallRunState : PlayerState
         {
             wallNormal = hit.normal;
 
-            player.body.AddForce(wallNormal * -30);
+            player.body.AddForce(wallNormal * -25);
 
         }
         else
