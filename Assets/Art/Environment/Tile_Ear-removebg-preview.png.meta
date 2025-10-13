@@ -130,7 +130,8 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      Tile_Ear-removebg-preview_0: -1643273285077979945
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

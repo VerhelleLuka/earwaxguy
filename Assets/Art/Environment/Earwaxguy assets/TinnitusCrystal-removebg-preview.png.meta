@@ -130,7 +130,8 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      TinnitusCrystal-removebg-preview_0: 4024327771158374554
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

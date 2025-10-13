@@ -25,7 +25,7 @@ public class BetterPlayerMovement : MonoBehaviour
     private float m_verticalMovement;
 
     //brakes
-    public float brakeSpeed = 0.5f;
+    public float brakeSpeed = 5f;
  
     public float slowDownRate = 5f;
 
@@ -105,6 +105,12 @@ public class BetterPlayerMovement : MonoBehaviour
 
             lineRenderer.SetPosition(1, new Vector3(transform.position.x, transform.position.y, -1f));
         }
+
+        //brake
+        if(horizontalMovement == 0f && verticalMovement == 0f && (GetCurrentStateName() == "GroundedState" || GetCurrentStateName() == "WallRunState" ))
+        {
+            body.velocity = Vector3.Lerp(body.velocity, Vector3.zero, brakeSpeed * Time.deltaTime);
+        }
     }
 
 
@@ -160,7 +166,12 @@ public class BetterPlayerMovement : MonoBehaviour
     public void ChangeState(PlayerState newState)
     {
         if (m_currentState != null)
+        {
+            if(GetCurrentStateName() == newState.GetType().Name) {
+                return;
+            }
             previousState = m_currentState;
+        }   
         else
             previousState =newState;
         m_currentState?.Exit();
@@ -260,9 +271,11 @@ public class BetterPlayerMovement : MonoBehaviour
                     }
                 }
                 //Hit Roof
-                else
-
+                else if ( GetCurrentStateName() != "WallRunState" )
+                {
                     ChangeState(new FallingState(this));
+
+                }
 
             }
 

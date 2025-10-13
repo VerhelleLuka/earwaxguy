@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements.Experimental;
@@ -36,7 +37,7 @@ public abstract class PlayerState
 
     public float stateTimer = 0.0f;
     public const float maxVelocity = 15f;
-    public const float moveSpeed = 75f;
+    public const float moveSpeed = 50f;
 
     public static Vector2 wallNormal;
     // public abstract PlayerState GetState();
@@ -102,7 +103,7 @@ public class JumpingState : PlayerState
 
         if (player.body.velocityY <= 0 && player.previousState.GetType().Name != "WallRunState")
         {
-            player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * Time.fixedDeltaTime , 0));
+            player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * Time.fixedDeltaTime, 0));
 
             player.ChangeState(new FallingState(player));
         }
@@ -131,7 +132,7 @@ public class GroundedState : PlayerState
 
     public override void Enter()
     {
-        //Debug.Log("Entering Idle State");
+        Debug.Log("Entering Grounded State");
     }
 
     public override void Exit()
@@ -160,89 +161,135 @@ public class GroundedState : PlayerState
         {
             player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * Time.fixedDeltaTime, 0));
         }
-       // player.body.velocity = new Vector2(Mathf.Clamp(player.body.velocity.x, maxVelocity * -1, maxVelocity), player.body.velocity.y);
+        // player.body.velocity = new Vector2(Mathf.Clamp(player.body.velocity.x, maxVelocity * -1, maxVelocity), player.body.velocity.y);
     }
     //public override string GetState() { return "Idle"; }
 }
 
+
 public class WallRunState : PlayerState
 {
     private int layerMask = LayerMask.GetMask("RunnableWall");
+    private Vector2 initialInputDir;
+    private bool isFollowingWall = false;
+
+    private const float followThreshold = 0.8f; //threshold for how far the player should the the joystick direction to maintain following of wall
+    private const float wallStickForce = 25f;
+    private const float wallFollowSpeed = moveSpeed;
+    private const float reattachSpeed = moveSpeed * 0.75f;
+    private const float stopThreshold = 0.2f;//to determine if player has stopped holding joystick
+    private const float maxVelMult = 0.75f;
+
     public WallRunState(BetterPlayerMovement player) : base(player) { }
 
     public override void Enter()
     {
-        // Debug.Log("Entering Wallrun State");
         player.body.gravityScale = 0;
         player.canDash = true;
+
+        Vector2 input = new Vector2(player.horizontalMovement, player.verticalMovement);
+        if (input.magnitude > stopThreshold)
+        {
+            initialInputDir = input.normalized;
+            isFollowingWall = true;
+        }
+        else
+        {
+            initialInputDir = Vector2.zero;
+            isFollowingWall = false;
+        }
+        //Debug.Log("ENTER WALLRUN");
     }
 
     public override void Exit()
     {
-        // Debug.Log("Exiting Wallrun State");
         player.body.gravityScale = 1.5f;
+        //Debug.Log("EXIT WALLRUN");
 
     }
-
 
     public override void Update()
     {
-
-
-        Vector3 p1 = player.transform.position;
-
-        RaycastHit2D hit = Physics2D.Raycast(player.transform.position, wallNormal * -1, 0.5f, layerMask);
-
+        Vector2 input = new Vector2(player.horizontalMovement, player.verticalMovement);
+        float inputMag = input.magnitude;
+        // Check still attached
+        RaycastHit2D hit = Physics2D.Raycast(player.transform.position, -wallNormal, 0.6f, layerMask);
         if (wallNormal == Vector2.zero)
-            hit = Physics2D.CircleCast(p1, 1, new Vector2(1, 0).normalized, 0.5f, layerMask);
-        //hit = Physics2D.Raycast(player.transform.position, Vector2.down, 2f, layerMask);
-
-        ApplyWallRunVelocity(wallNormal * -1);
-        if (hit)
+            hit = Physics2D.CircleCast(player.transform.position, 5f, Vector2.right, 0.6f, layerMask);
+        if (!hit)
         {
-            wallNormal = hit.normal;
+            player.ChangeState(new FallingState(player));
+            return;
+        }
+        wallNormal = hit.normal;
+        // Compute tangent from wall normal
+        Vector2 tangent = new Vector2(-wallNormal.y, wallNormal.x).normalized;
+        // Stick to wall
+        player.body.AddForce(-wallNormal * wallStickForce);
+        // If player released stick, exit follow mode
+        if (inputMag < stopThreshold)
+        {
+            isFollowingWall = false;
+        }
+        Vector2 moveDir;
+        if (isFollowingWall)
+        { 
+            // Compare input direction to initial direction
+            float similarity = Vector2.Dot(input.normalized, initialInputDir);
+            Debug.Log(Mathf.Abs(similarity) + " > " + followThreshold);
+            if (similarity > followThreshold)
+            {
+                // Continue following tangent
+                if (Vector2.Dot(player.body.velocity.normalized, tangent) < 0)
+                    tangent = -tangent;
+                moveDir = tangent;
 
-            player.body.AddForce(wallNormal * -25);
+              
+            }
+            else
+            {
+                // Player changed input direction → free mode
+                isFollowingWall = false;
+                initialInputDir = input.normalized;
+                moveDir = input.normalized;
+                // Redirect velocity to new input
+                Vector2 newMoveDir = input.normalized;
 
+                // Optional: blend current velocity and new input for smooth transition
+                player.body.velocity = newMoveDir * player.body.velocity.magnitude;
+                player.body.velocity = Vector2.Lerp(player.body.velocity, newMoveDir * player.body.velocity.magnitude, 0.2f);
+
+            }
         }
         else
-            player.ChangeState(new FallingState(player));
-
-
-        Debug.DrawLine(player.transform.position,
-    new Vector3(player.transform.position.x + wallNormal.x,
-   player.transform.position.y + wallNormal.y,
-    player.transform.position.z), Color.blue);
-        Debug.DrawLine(player.transform.position,
-    new Vector3(player.transform.position.x + wallNormal.x * -1,
-   player.transform.position.y + wallNormal.y * -1,
-    player.transform.position.z), Color.red);
-    }
-
-    public void ApplyWallRunVelocity(Vector2 playerDownDirection)
-    {
-
-        Vector2 newMovementDir = Vector2.zero;
-        if (player.horizontalMovement < 0)
         {
-            newMovementDir = new Vector2(playerDownDirection.y, -1 * playerDownDirection.x);//90 degrees clockwise rotation
-            player.body.AddForce(new Vector2(newMovementDir.normalized.x * moveSpeed * Time.fixedDeltaTime, newMovementDir.normalized.y * moveSpeed * Time.fixedDeltaTime));
+            // Free mode — apply joystick direction directly (world space)
+
+            if (inputMag > stopThreshold)
+            {
+                moveDir = input.normalized;
+                //initialInputDir = input.normalized;
+                isFollowingWall = true;
+            }
+            else
+            {
+                moveDir = Vector2.zero;
+            }
         }
-        else if (player.horizontalMovement > 0)
+        // Apply movement
+        if (moveDir != Vector2.zero)
         {
-            newMovementDir = new Vector2(playerDownDirection.y * -1, playerDownDirection.x);//90 degrees counterclockwise rotation
-            player.body.AddForce(new Vector2(newMovementDir.normalized.x * moveSpeed * Time.fixedDeltaTime, newMovementDir.normalized.y * moveSpeed * Time.fixedDeltaTime));
+            float force = isFollowingWall ? wallFollowSpeed : reattachSpeed;
+            player.body.AddForce(moveDir * force * Time.fixedDeltaTime);
         }
-        player.body.velocity = Vector2.ClampMagnitude(player.body.velocity, maxVelocity * maxVelMult );
-
-        Debug.DrawLine(player.transform.position,
-new Vector3(player.transform.position.x + newMovementDir.x,
-player.transform.position.y + newMovementDir.y,
-player.transform.position.z), Color.yellow);
+        // Clamp velocity
+        player.body.velocity = Vector2.ClampMagnitude(player.body.velocity, maxVelocity * maxVelMult);
+        // Debug visuals
+        Debug.DrawLine(player.transform.position, player.transform.position + (Vector3)wallNormal, Color.blue);
+        Debug.DrawLine(player.transform.position, player.transform.position + (Vector3)moveDir, Color.yellow);
     }
-
-    private const float maxVelMult = 1.3f;
 }
+
 
 
 public class FallingState : PlayerState
@@ -251,7 +298,7 @@ public class FallingState : PlayerState
 
     public override void Enter()
     {
-        //Debug.Log("Entering Falling State");
+        Debug.Log("Entering Falling State");
     }
 
     public override void Exit()
@@ -381,7 +428,7 @@ public class DashState : PlayerState
             Vector2 normalizedVector = mousePos - player.transform.position;
 
             newVelocity = normalizedVector.normalized;
-            Debug.Log(Vector2.Dot(normalizedVector.normalized, player.body.velocity.normalized));
+            //Debug.Log(Vector2.Dot(normalizedVector.normalized, player.body.velocity.normalized));
 
             if (Vector2.Dot(normalizedVector.normalized, player.body.velocity.normalized) > 0)
             {

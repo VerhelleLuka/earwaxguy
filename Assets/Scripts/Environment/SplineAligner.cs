@@ -13,7 +13,7 @@ public class SplineAligner : MonoBehaviour
 
         Spline spline = splineContainer.Spline; // Get the spline from the container
 
-        int objectCount = splineInstantiate._instances.Count;
+        int objectCount = 0;//splineInstantiate._instances.Count;
         // Iterate and instantiate objects along the spline
         for (int i = 0; i < objectCount; i++)
         {
@@ -31,7 +31,7 @@ public class SplineAligner : MonoBehaviour
             // Align the object's rotation with the spline's direction
             Quaternion rotation = Quaternion.LookRotation(tangent, normal);
 
-            splineInstantiate._instances[i].transform.rotation = Quaternion.Euler( Mathf.Rad2Deg * rotation.x, Mathf.Rad2Deg * rotation.y, Mathf.Rad2Deg * rotation.z * 2) ;
+           // splineInstantiate._instances[i].transform.rotation = Quaternion.Euler( Mathf.Rad2Deg * rotation.x, Mathf.Rad2Deg * rotation.y, Mathf.Rad2Deg * rotation.z * 2) ;
 
 
         }

@@ -130,7 +130,8 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      Swing-removebg-preview_0: -472531064987411915
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

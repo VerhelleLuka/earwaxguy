@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 96254ffe857a8374385db1e108027bc1
+guid: 7259e587d7c6e114aae126936498ef89
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 4883519004823324250
-    second: SwingConnection_0
+      213: -5121260183178812635
+    second: LightEarwax_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -100,13 +100,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: SwingConnection_0
+      name: LightEarwax_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 551
-        height: 410
+        width: 1024
+        height: 1024
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -114,8 +114,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: a560d5039aeb5c340800000000000000
-      internalID: 4883519004823324250
+      spriteID: 523664b3ff0ade8b0800000000000000
+      internalID: -5121260183178812635
       vertices: []
       indices: 
       edges: []
@@ -130,8 +130,7 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable:
-      SwingConnection_0: 4883519004823324250
+    nameFileIdTable: {}
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

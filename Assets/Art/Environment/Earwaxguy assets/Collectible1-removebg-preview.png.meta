@@ -130,7 +130,8 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      Collectible1-removebg-preview_0: 5533232503652058630
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

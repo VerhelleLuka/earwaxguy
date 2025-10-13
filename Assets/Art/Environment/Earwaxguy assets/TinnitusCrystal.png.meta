@@ -130,7 +130,8 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      TinnitusCrystal_0: -5156938102711166146
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
