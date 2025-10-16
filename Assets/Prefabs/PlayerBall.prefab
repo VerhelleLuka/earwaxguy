@@ -431,7 +431,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 0
 --- !u!114 &1571989960512977675
 MonoBehaviour:
@@ -458,21 +458,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0ddf4edb5f3f36459a1ce44c4f06721, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveAccel: 7.2
-  groundFriction: 0.85
-  gravity: -3
-  bounceVel: 1.25
-  jumpMinTime: 0.06
-  jumpMaxTime: 0.2
-  airFallFriction: 0.975
-  airMoveFriction: 0.85
-  vel: {x: 0, y: 0}
   body: {fileID: 0}
   m_bounceTime: 0.1
   groundCount: 0
-  moveSpeed: 250
   brakeSpeed: 10
-  maxVelocity: 12
   slowDownRate: 1
   canDash: 0
   dashCooldown: 1.2

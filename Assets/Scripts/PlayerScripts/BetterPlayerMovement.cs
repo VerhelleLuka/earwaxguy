@@ -75,13 +75,18 @@ public class BetterPlayerMovement : MonoBehaviour
     {
         ChangeState(new GroundedState(this));
         body = GetComponent<Rigidbody2D>();
+        body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
     }
 
+    private void FixedUpdate()
+    {
+        m_currentState?.Update();
+    }
 
     // Update is called once per frame
     void Update()
     {
-        m_currentState?.Update();
+    
 
         if (!canDash)
         {
@@ -204,11 +209,11 @@ public class BetterPlayerMovement : MonoBehaviour
     {
         ProcessCollision(collision);
         groundCount = m_groundObjects.Count;
-
         if (collision.transform.CompareTag("RunnableWall"))
         {
             ChangeState(new WallRunState(this));
         }
+
     }
 
     private void OnCollisionExit2D(Collision2D collision)
@@ -216,20 +221,15 @@ public class BetterPlayerMovement : MonoBehaviour
         m_groundObjects.Remove(collision.gameObject);
         groundCount = m_groundObjects.Count;
 
-        bool wallRunning = false;
         foreach (GameObject Object in m_groundObjects)
         {
 
             if (Object.CompareTag("RunnableWall"))
             {
-                wallRunning = true;
+                ChangeState(new WallRunState(this));
             }
         }
-        if (!wallRunning)
-        {
-            //ChangeState(new FallingState(this));
-        }
-        //Debug.Log(wallRunning);
+
     }
 
     public void ClearCollisions()
@@ -264,14 +264,18 @@ public class BetterPlayerMovement : MonoBehaviour
                     if (GetCurrentStateName() == "FallingState")
                     {
                         //If we've been pushed up, we've hit the ground.  Go to a ground-based state.
-                        if (m_wantsRight || m_wantsLeft)
+                        if ((m_wantsRight || m_wantsLeft) && !collision.transform.CompareTag("RunnableWall"))
                         {
                             ChangeState(new GroundedState(this));
+                        }
+                        else if(collision.transform.CompareTag("RunnableWall"))
+                        {
+                            ChangeState(new WallRunState(this));
                         }
                     }
                 }
                 //Hit Roof
-                else if ( GetCurrentStateName() != "WallRunState" )
+                else if ( GetCurrentStateName() != "WallRunState" && !collision.transform.CompareTag("RunnableWall"))
                 {
                     ChangeState(new FallingState(this));
 

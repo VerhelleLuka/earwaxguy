@@ -37,7 +37,7 @@ public abstract class PlayerState
 
     public float stateTimer = 0.0f;
     public const float maxVelocity = 15f;
-    public const float moveSpeed = 50f;
+    public const float moveSpeed = 300f;
 
     public static Vector2 wallNormal;
     // public abstract PlayerState GetState();
@@ -53,7 +53,7 @@ public class JumpingState : PlayerState
 
     public override void Enter()
     {
-        Debug.Log("Entering Jumping State");
+        // Debug.Log("Entering Jumping State");
 
         Vector2 newJumpDir = Vector2.zero;
 
@@ -132,7 +132,7 @@ public class GroundedState : PlayerState
 
     public override void Enter()
     {
-        Debug.Log("Entering Grounded State");
+        //Debug.Log("Entering Grounded State");
     }
 
     public override void Exit()
@@ -174,11 +174,14 @@ public class WallRunState : PlayerState
     private bool isFollowingWall = false;
 
     private const float followThreshold = 0.8f; //threshold for how far the player should the the joystick direction to maintain following of wall
-    private const float wallStickForce = 25f;
+    private const float wallStickForce = 40f;
     private const float wallFollowSpeed = moveSpeed;
     private const float reattachSpeed = moveSpeed * 0.75f;
     private const float stopThreshold = 0.2f;//to determine if player has stopped holding joystick
     private const float maxVelMult = 0.75f;
+
+    //Prevent player not latching to wall
+    private float wallStickGraceTimer = 0.1f;
 
     public WallRunState(BetterPlayerMovement player) : base(player) { }
 
@@ -186,6 +189,7 @@ public class WallRunState : PlayerState
     {
         player.body.gravityScale = 0;
         player.canDash = true;
+        wallStickGraceTimer = 0.1f;
 
         Vector2 input = new Vector2(player.horizontalMovement, player.verticalMovement);
         if (input.magnitude > stopThreshold)
@@ -207,6 +211,19 @@ public class WallRunState : PlayerState
         //Debug.Log("EXIT WALLRUN");
 
     }
+    IEnumerator AddForceToStick()
+    {
+        float extraWallStickForce = 10f;
+        float duration = 0.1f;
+        float timer = 0f;
+
+        while (timer < duration)
+        {
+            player.body.AddForce(-wallNormal * wallStickForce * extraWallStickForce * Time.fixedDeltaTime);
+            timer += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate(); // Wait until next physics update
+        }
+    }
 
     public override void Update()
     {
@@ -218,14 +235,23 @@ public class WallRunState : PlayerState
             hit = Physics2D.CircleCast(player.transform.position, 5f, Vector2.right, 0.6f, layerMask);
         if (!hit)
         {
-            player.ChangeState(new FallingState(player));
-            return;
+            wallStickGraceTimer -= Time.deltaTime;
+            if (wallStickGraceTimer <= 0f)
+            {
+                player.ChangeState(new FallingState(player));
+                return;
+            }
         }
         wallNormal = hit.normal;
         // Compute tangent from wall normal
         Vector2 tangent = new Vector2(-wallNormal.y, wallNormal.x).normalized;
         // Stick to wall
         player.body.AddForce(-wallNormal * wallStickForce);
+
+        if(player.groundObjects.Count == 0)
+        {
+            player.StartCoroutine(AddForceToStick());
+        }
         // If player released stick, exit follow mode
         if (inputMag < stopThreshold)
         {
@@ -233,10 +259,9 @@ public class WallRunState : PlayerState
         }
         Vector2 moveDir;
         if (isFollowingWall)
-        { 
+        {
             // Compare input direction to initial direction
             float similarity = Vector2.Dot(input.normalized, initialInputDir);
-            Debug.Log(Mathf.Abs(similarity) + " > " + followThreshold);
             if (similarity > followThreshold)
             {
                 // Continue following tangent
@@ -244,7 +269,7 @@ public class WallRunState : PlayerState
                     tangent = -tangent;
                 moveDir = tangent;
 
-              
+
             }
             else
             {
@@ -298,7 +323,7 @@ public class FallingState : PlayerState
 
     public override void Enter()
     {
-        Debug.Log("Entering Falling State");
+        //Debug.Log("Entering Falling State");
     }
 
     public override void Exit()
@@ -314,8 +339,16 @@ public class FallingState : PlayerState
         {
             player.ChangeState(new GroundedState(player));
         }
-        player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * Time.fixedDeltaTime * 0.75f, 0));
+        //player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * Time.fixedDeltaTime * 0.75f, 0));
+        else if ((player.horizontalMovement < 0 && player.body.velocity.x > 0) || (player.horizontalMovement > 0 && player.body.velocity.x < 0))
+        {
+            player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * player.brakeSpeed * Time.fixedDeltaTime, 0));
+        }
 
+        else
+        {
+            player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * Time.fixedDeltaTime, 0));
+        }
     }
     //public override string GetState() { return "Falling"; }
 }
