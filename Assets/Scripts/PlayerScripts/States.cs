@@ -51,6 +51,7 @@ public class JumpingState : PlayerState
 
     }
 
+ 
     public override void Enter()
     {
         // Debug.Log("Entering Jumping State");
@@ -71,18 +72,7 @@ public class JumpingState : PlayerState
             newJumpDir = wallNormal * jumpPower;
             player.body.AddForce(new Vector2(newJumpDir.x, newJumpDir.y));
         }
-        //else if (player.horizontalMovement < 0)
-        //{
-        //    newJumpDir = new Vector2(player.body.velocity.y, -1 * player.body.velocity.x).normalized * jumpPower;//90 degrees clockwise rotation
-        //    player.body.AddForce(new Vector2(newJumpDir.x, newJumpDir.y));
-        //}
 
-        //else if (player.horizontalMovement > 0)
-        //{
-        //    newJumpDir = new Vector2(player.body.velocity.y * -1, player.body.velocity.x).normalized * jumpPower;//90 degrees counterclockwise rotation
-
-        //    player.body.AddForce(new Vector2(newJumpDir.x, newJumpDir.y));
-        //}
         player.canDash = true;
 
 
@@ -140,7 +130,6 @@ public class GroundedState : PlayerState
         //Debug.Log("Exiting Idle State");
     }
 
-    private float m_pushDownForce = 4f;
 
     public override void Update()
     {
@@ -281,7 +270,7 @@ public class WallRunState : PlayerState
                 Vector2 newMoveDir = input.normalized;
 
                 // Optional: blend current velocity and new input for smooth transition
-                player.body.velocity = newMoveDir * player.body.velocity.magnitude;
+                player.body.velocity = newMoveDir * player.body.velocity.magnitude * 0.75f;
                 player.body.velocity = Vector2.Lerp(player.body.velocity, newMoveDir * player.body.velocity.magnitude, 0.2f);
 
             }
@@ -328,13 +317,15 @@ public class FallingState : PlayerState
 
     public override void Exit()
     {
-        //Debug.Log("Exiting Idle State");
+        //Debug.Log("Exiting Falling State");
+        player.jumpGraceTime = 0.15f;
+
     }
 
     public override void Update()
     {
 
-
+        player.jumpGraceTime -= Time.fixedDeltaTime;
         if (player.groundObjects.Count > 0)
         {
             player.ChangeState(new GroundedState(player));

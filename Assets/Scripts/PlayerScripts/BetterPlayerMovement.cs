@@ -54,6 +54,12 @@ public class BetterPlayerMovement : MonoBehaviour
 
     public PlayerState previousState;
 
+    //Jump
+    public float jumpGraceTime = 0.15f;
+
+    //wallrun
+    private bool m_WallRunPending = false;
+
 
 
     public float horizontalMovement
@@ -86,7 +92,11 @@ public class BetterPlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-    
+        if(m_WallRunPending)
+        {
+            ChangeState(new WallRunState(this));
+            m_WallRunPending = false;
+        }
 
         if (!canDash)
         {
@@ -127,9 +137,11 @@ public class BetterPlayerMovement : MonoBehaviour
 
     public void Jump(InputAction.CallbackContext context)
     {
-        if (context.ReadValue<float>() > 0f && (GetCurrentStateName() == "WallRunState" || m_groundObjects.Count > 0) && GetCurrentStateName() != "JumpingState")
+        if (context.ReadValue<float>() > 0f && (GetCurrentStateName() != "FallingState" || jumpGraceTime > 0f) && GetCurrentStateName() != "JumpingState" )
         {
+            Debug.Log("AAAAAAAAAAAAARGH");
             ChangeState(new JumpingState(this));
+            jumpGraceTime = -1f;
         }
 
     }
@@ -211,7 +223,8 @@ public class BetterPlayerMovement : MonoBehaviour
         groundCount = m_groundObjects.Count;
         if (collision.transform.CompareTag("RunnableWall"))
         {
-            ChangeState(new WallRunState(this));
+           // ChangeState(new WallRunState(this));
+            m_WallRunPending = true;
         }
 
     }
@@ -226,7 +239,8 @@ public class BetterPlayerMovement : MonoBehaviour
 
             if (Object.CompareTag("RunnableWall"))
             {
-                ChangeState(new WallRunState(this));
+                m_WallRunPending = true;
+                //ChangeState(new WallRunState(this));
             }
         }
 
