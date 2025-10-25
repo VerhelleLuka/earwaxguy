@@ -58,6 +58,7 @@ public class JumpingState : PlayerState
 
         Vector2 newJumpDir = Vector2.zero;
 
+        player.body.angularVelocity = 0f;
 
         if (player.previousState.GetType().Name != "WallRunState")
         {
@@ -108,7 +109,7 @@ public class JumpingState : PlayerState
     }
     private float m_wallRunJumpDelay = 1f;
     public float jumpVel = 0.575f;
-    public float jumpPower = 400f;
+    public float jumpPower = 500f;
 
 
 }
@@ -122,6 +123,8 @@ public class GroundedState : PlayerState
 
     public override void Enter()
     {
+        player.canDash = true;
+
         //Debug.Log("Entering Grounded State");
     }
 
@@ -133,7 +136,6 @@ public class GroundedState : PlayerState
 
     public override void Update()
     {
-        player.canDash = true;
 
         if (player.groundObjects.Count == 0)
         {
@@ -161,6 +163,7 @@ public class WallRunState : PlayerState
     private int layerMask = LayerMask.GetMask("RunnableWall");
     private Vector2 initialInputDir;
     private bool isFollowingWall = false;
+    private bool braking = false;
 
     private const float followThreshold = 0.8f; //threshold for how far the player should the the joystick direction to maintain following of wall
     private const float wallStickForce = 40f;
@@ -181,10 +184,19 @@ public class WallRunState : PlayerState
         wallStickGraceTimer = 0.1f;
 
         Vector2 input = new Vector2(player.horizontalMovement, player.verticalMovement);
+        Debug.Log(Vector2.Dot(player.body.velocity.normalized, input.normalized));
         if (input.magnitude > stopThreshold)
         {
             initialInputDir = input.normalized;
             isFollowingWall = true;
+
+            //If joystick direction changed before attaching (eg in a jump), set the initial direction to the direction of movement
+            if (Vector2.Dot(player.body.velocity.normalized, input.normalized) < followThreshold)
+            {
+                initialInputDir = player.body.velocity.normalized;
+                isFollowingWall = false;
+            }
+
         }
         else
         {
@@ -192,6 +204,7 @@ public class WallRunState : PlayerState
             isFollowingWall = false;
         }
         //Debug.Log("ENTER WALLRUN");
+        Debug.Log(isFollowingWall);
     }
 
     public override void Exit()
@@ -221,7 +234,7 @@ public class WallRunState : PlayerState
         // Check still attached
         RaycastHit2D hit = Physics2D.Raycast(player.transform.position, -wallNormal, 0.6f, layerMask);
         if (wallNormal == Vector2.zero)
-            hit = Physics2D.CircleCast(player.transform.position, 5f, Vector2.right, 0.6f, layerMask);
+            hit = Physics2D.CircleCast(player.transform.position, 2.5f, Vector2.right, 0.6f, layerMask);
         if (!hit)
         {
             wallStickGraceTimer -= Time.deltaTime;
@@ -258,20 +271,26 @@ public class WallRunState : PlayerState
                     tangent = -tangent;
                 moveDir = tangent;
 
-
             }
             else
             {
+                if(Vector2.Dot(player.body.velocity.normalized, input.normalized) > followThreshold)
+                {
+                    isFollowingWall = false;
+                    braking = false;
+                    initialInputDir = input.normalized;
+                }
+                braking = true;
                 // Player changed input direction → free mode
-                isFollowingWall = false;
-                initialInputDir = input.normalized;
+               
+                //initialInputDir = input.normalized;
                 moveDir = input.normalized;
                 // Redirect velocity to new input
-                Vector2 newMoveDir = input.normalized;
+                //Vector2 newMoveDir = input.normalized;
 
                 // Optional: blend current velocity and new input for smooth transition
-                player.body.velocity = newMoveDir * player.body.velocity.magnitude * 0.75f;
-                player.body.velocity = Vector2.Lerp(player.body.velocity, newMoveDir * player.body.velocity.magnitude, 0.2f);
+                //player.body.velocity = newMoveDir * player.body.velocity.magnitude * 0.75f;
+                //player.body.velocity = Vector2.Lerp(player.body.velocity, newMoveDir * player.body.velocity.magnitude, 0.2f);
 
             }
         }
@@ -284,6 +303,7 @@ public class WallRunState : PlayerState
                 moveDir = input.normalized;
                 //initialInputDir = input.normalized;
                 isFollowingWall = true;
+                Debug.Log("SET TRUE HERE");
             }
             else
             {
@@ -294,7 +314,11 @@ public class WallRunState : PlayerState
         if (moveDir != Vector2.zero)
         {
             float force = isFollowingWall ? wallFollowSpeed : reattachSpeed;
-            player.body.AddForce(moveDir * force * Time.fixedDeltaTime);
+            if(braking)
+                player.body.AddForce(moveDir * force *player.brakeSpeed * Time.fixedDeltaTime);
+
+            else
+                player.body.AddForce(moveDir * force * Time.fixedDeltaTime);
         }
         // Clamp velocity
         player.body.velocity = Vector2.ClampMagnitude(player.body.velocity, maxVelocity * maxVelMult);

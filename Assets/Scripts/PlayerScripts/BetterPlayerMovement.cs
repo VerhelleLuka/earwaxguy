@@ -139,7 +139,6 @@ public class BetterPlayerMovement : MonoBehaviour
     {
         if (context.ReadValue<float>() > 0f && (GetCurrentStateName() != "FallingState" || jumpGraceTime > 0f) && GetCurrentStateName() != "JumpingState" )
         {
-            Debug.Log("AAAAAAAAAAAAARGH");
             ChangeState(new JumpingState(this));
             jumpGraceTime = -1f;
         }
@@ -156,7 +155,13 @@ public class BetterPlayerMovement : MonoBehaviour
             Destroy(springJoint);
             body.angularVelocity = angularVelocityBeforeSwing;
             lineRenderer.enabled = false;
-            ChangeState(new GroundedState(this));
+            if (m_groundObjects.Count > 0)
+            {
+                ChangeState(new GroundedState(this));
+
+            }
+            else
+                ChangeState(new FallingState(this));
         }
         else if (CanSwing)
         {
