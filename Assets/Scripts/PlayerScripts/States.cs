@@ -51,7 +51,7 @@ public class JumpingState : PlayerState
 
     }
 
- 
+
     public override void Enter()
     {
         // Debug.Log("Entering Jumping State");
@@ -60,7 +60,7 @@ public class JumpingState : PlayerState
 
         player.body.angularVelocity = 0f;
 
-        if (player.previousState.GetType().Name != "WallRunState")
+        if (player.previousState is not WallRunState)
         {
             player.body.velocity = new Vector2(player.body.velocity.x, 0);
             player.body.AddForce(new Vector2(0, jumpPower));
@@ -72,9 +72,9 @@ public class JumpingState : PlayerState
         {
             newJumpDir = wallNormal * jumpPower;
             player.body.AddForce(new Vector2(newJumpDir.x, newJumpDir.y));
+            wallNormal = Vector2.zero;
         }
 
-        player.canDash = true;
 
 
     }
@@ -92,18 +92,22 @@ public class JumpingState : PlayerState
         //    player.body.AddForce(new Vector2(0, jumpPower / 2));
 
 
-        if (player.body.velocityY <= 0 && player.previousState.GetType().Name != "WallRunState")
+        if (player.body.velocityY < 0 && player.previousState is not WallRunState)
         {
             player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * Time.fixedDeltaTime, 0));
-
             player.ChangeState(new FallingState(player));
         }
-        else if (stateTimer > m_wallRunJumpDelay && player.previousState.GetType().Name == "WallRunState")
+        else if (stateTimer > m_wallRunJumpDelay && player.previousState is WallRunState)
         {
             stateTimer = 0;
 
             player.ChangeState(new FallingState(player));
 
+        }
+
+        if (player.groundObjects.Count > 0)
+        {
+            player.ChangeState(new GroundedState(player));
         }
 
     }
@@ -125,7 +129,8 @@ public class GroundedState : PlayerState
     {
         player.canDash = true;
 
-        //Debug.Log("Entering Grounded State");
+        Debug.Log("Entering Grounded State");
+        // Debug.Log(player.previousState);
     }
 
     public override void Exit()
@@ -175,16 +180,20 @@ public class WallRunState : PlayerState
     //Prevent player not latching to wall
     private float wallStickGraceTimer = 0.1f;
 
+
+    //To stop coroutine from happening
+    private bool playerLeftWall = false;
+
     public WallRunState(BetterPlayerMovement player) : base(player) { }
 
     public override void Enter()
     {
+        playerLeftWall = false;
         player.body.gravityScale = 0;
         player.canDash = true;
         wallStickGraceTimer = 0.1f;
 
         Vector2 input = new Vector2(player.horizontalMovement, player.verticalMovement);
-        Debug.Log(Vector2.Dot(player.body.velocity.normalized, input.normalized));
         if (input.magnitude > stopThreshold)
         {
             initialInputDir = input.normalized;
@@ -204,13 +213,16 @@ public class WallRunState : PlayerState
             isFollowingWall = false;
         }
         //Debug.Log("ENTER WALLRUN");
-        Debug.Log(isFollowingWall);
     }
 
     public override void Exit()
     {
         player.body.gravityScale = 1.5f;
-        //Debug.Log("EXIT WALLRUN");
+
+        playerLeftWall = true;
+        player.StopCoroutine(AddForceToStick());
+        
+        //f("EXIT WALLRUN");
 
     }
     IEnumerator AddForceToStick()
@@ -221,7 +233,8 @@ public class WallRunState : PlayerState
 
         while (timer < duration)
         {
-            player.body.AddForce(-wallNormal * wallStickForce * extraWallStickForce * Time.fixedDeltaTime);
+            if (!playerLeftWall)
+                player.body.AddForce(-wallNormal * wallStickForce * extraWallStickForce * Time.fixedDeltaTime);
             timer += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate(); // Wait until next physics update
         }
@@ -234,7 +247,25 @@ public class WallRunState : PlayerState
         // Check still attached
         RaycastHit2D hit = Physics2D.Raycast(player.transform.position, -wallNormal, 0.6f, layerMask);
         if (wallNormal == Vector2.zero)
-            hit = Physics2D.CircleCast(player.transform.position, 2.5f, Vector2.right, 0.6f, layerMask);
+        {
+            // Choose direction based on input or velocity
+            Vector2 detectDir = inputMag > 0.1f ? input.normalized : player.body.velocity.normalized;
+            var hits = Physics2D.CircleCastAll(player.transform.position, 3f, detectDir, 0.6f, layerMask);
+
+            float minDist = 100f;
+            foreach (RaycastHit2D subHit in hits)
+            {
+                float distance = new Vector2(player.transform.position.x - subHit.point.x, player.transform.position.y - subHit.point.y).magnitude;
+                if (distance < minDist)
+                {
+                    minDist = distance;
+                    hit = subHit;
+                }
+            }
+
+        }
+
+
         if (!hit)
         {
             wallStickGraceTimer -= Time.deltaTime;
@@ -250,7 +281,7 @@ public class WallRunState : PlayerState
         // Stick to wall
         player.body.AddForce(-wallNormal * wallStickForce);
 
-        if(player.groundObjects.Count == 0)
+        if (player.groundObjects.Count == 0)
         {
             player.StartCoroutine(AddForceToStick());
         }
@@ -274,24 +305,15 @@ public class WallRunState : PlayerState
             }
             else
             {
-                if(Vector2.Dot(player.body.velocity.normalized, input.normalized) > followThreshold)
+                if (Vector2.Dot(player.body.velocity.normalized, input.normalized) > followThreshold)
                 {
                     isFollowingWall = false;
                     braking = false;
                     initialInputDir = input.normalized;
                 }
                 braking = true;
-                // Player changed input direction → free mode
-               
-                //initialInputDir = input.normalized;
+
                 moveDir = input.normalized;
-                // Redirect velocity to new input
-                //Vector2 newMoveDir = input.normalized;
-
-                // Optional: blend current velocity and new input for smooth transition
-                //player.body.velocity = newMoveDir * player.body.velocity.magnitude * 0.75f;
-                //player.body.velocity = Vector2.Lerp(player.body.velocity, newMoveDir * player.body.velocity.magnitude, 0.2f);
-
             }
         }
         else
@@ -303,7 +325,6 @@ public class WallRunState : PlayerState
                 moveDir = input.normalized;
                 //initialInputDir = input.normalized;
                 isFollowingWall = true;
-                Debug.Log("SET TRUE HERE");
             }
             else
             {
@@ -314,8 +335,8 @@ public class WallRunState : PlayerState
         if (moveDir != Vector2.zero)
         {
             float force = isFollowingWall ? wallFollowSpeed : reattachSpeed;
-            if(braking)
-                player.body.AddForce(moveDir * force *player.brakeSpeed * Time.fixedDeltaTime);
+            if (braking)
+                player.body.AddForce(moveDir * force * player.brakeSpeed * Time.fixedDeltaTime);
 
             else
                 player.body.AddForce(moveDir * force * Time.fixedDeltaTime);
@@ -348,10 +369,22 @@ public class FallingState : PlayerState
 
     public override void Update()
     {
+        //Only allow grace if player was grounded
+        if (player.previousState is GroundedState)
+            player.jumpGraceTime -= Time.fixedDeltaTime;
 
-        player.jumpGraceTime -= Time.fixedDeltaTime;
+        if (player.jumpBufferRequest)
+            player.jumpBufferTime -= Time.fixedDeltaTime;
+
         if (player.groundObjects.Count > 0)
         {
+            if (player.jumpBufferTime >= 0f && player.jumpBufferRequest)
+            {
+                player.ChangeState(new JumpingState(player));
+                player.jumpBufferTime = 0.2f;
+                player.jumpBufferRequest = false;
+                return;
+            }
             player.ChangeState(new GroundedState(player));
         }
         //player.body.AddForce(new Vector2(player.horizontalMovement * moveSpeed * Time.fixedDeltaTime * 0.75f, 0));

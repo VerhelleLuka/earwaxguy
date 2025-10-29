@@ -26,7 +26,7 @@ public class BetterPlayerMovement : MonoBehaviour
 
     //brakes
     public float brakeSpeed = 5f;
- 
+
     public float slowDownRate = 5f;
 
     //dash
@@ -56,6 +56,8 @@ public class BetterPlayerMovement : MonoBehaviour
 
     //Jump
     public float jumpGraceTime = 0.15f;
+    public float jumpBufferTime = 0.2f;
+    public bool jumpBufferRequest = false;
 
     //wallrun
     private bool m_WallRunPending = false;
@@ -92,7 +94,7 @@ public class BetterPlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if(m_WallRunPending)
+        if (m_WallRunPending)
         {
             ChangeState(new WallRunState(this));
             m_WallRunPending = false;
@@ -108,7 +110,7 @@ public class BetterPlayerMovement : MonoBehaviour
             }
         }
 
-        if (GetCurrentStateName() != "SwingingState" && CanSwing)
+        if (m_currentState is not SwingingState && CanSwing)
         {
             Vector3 playerPos = transform.position;
             playerPos.z = 0f;
@@ -122,7 +124,7 @@ public class BetterPlayerMovement : MonoBehaviour
         }
 
         //brake
-        if(horizontalMovement == 0f && verticalMovement == 0f && (GetCurrentStateName() == "GroundedState" || GetCurrentStateName() == "WallRunState" ))
+        if (horizontalMovement == 0f && verticalMovement == 0f && (m_currentState is GroundedState || m_currentState is WallRunState))
         {
             body.velocity = Vector3.Lerp(body.velocity, Vector3.zero, brakeSpeed * Time.deltaTime);
         }
@@ -137,10 +139,43 @@ public class BetterPlayerMovement : MonoBehaviour
 
     public void Jump(InputAction.CallbackContext context)
     {
-        if (context.ReadValue<float>() > 0f && (GetCurrentStateName() != "FallingState" || jumpGraceTime > 0f) && GetCurrentStateName() != "JumpingState" )
+        if (context.ReadValue<float>() <= 0f) return; // only respond to press, not release
+
+        bool onGround = groundObjects.Count > 0;
+        bool onWallRun = m_currentState is WallRunState;
+        bool falling = m_currentState is FallingState;
+        bool dashState = m_currentState is DashState;
+        bool jumping = m_currentState is JumpingState;
+
+        // 1) Wallrun jump: always allow if wallrunning
+        if (onWallRun && !jumping && !dashState)
         {
             ChangeState(new JumpingState(this));
             jumpGraceTime = -1f;
+            return;
+        }
+
+        // 2) Normal grounded jump
+        if (onGround && !jumping && !dashState)
+        {
+            ChangeState(new JumpingState(this));
+            jumpGraceTime = -1f;
+            return;
+        }
+
+        // 3) Coyote time jump: allow shortly after leaving ground
+        if (falling && jumpGraceTime > 0f && previousState is not JumpingState && !jumping && !dashState)
+        {
+            ChangeState(new JumpingState(this));
+            jumpGraceTime = -1f;
+            return;
+        }
+
+        // 4) Buffered jump: pressed while falling but allowed to execute when landing
+        if (falling && !jumping && !dashState)
+        {
+            jumpBufferRequest = true;
+            jumpBufferTime = 0.2f;
         }
 
     }
@@ -160,7 +195,7 @@ public class BetterPlayerMovement : MonoBehaviour
                 ChangeState(new GroundedState(this));
 
             }
-            else
+            else if(m_currentState is not WallRunState)
                 ChangeState(new FallingState(this));
         }
         else if (CanSwing)
@@ -189,13 +224,14 @@ public class BetterPlayerMovement : MonoBehaviour
     {
         if (m_currentState != null)
         {
-            if(GetCurrentStateName() == newState.GetType().Name) {
+            if (GetCurrentStateName() == newState.GetType().Name)
+            {
                 return;
             }
             previousState = m_currentState;
-        }   
+        }
         else
-            previousState =newState;
+            previousState = newState;
         m_currentState?.Exit();
         m_currentState = newState;
         m_currentState.Enter();
@@ -217,7 +253,7 @@ public class BetterPlayerMovement : MonoBehaviour
         {
             CanSwing = false;
 
-            if (GetCurrentStateName() != "SwingingState")
+            if (m_currentState is SwingingState)
                 lineRenderer.enabled = false;
         }
     }
@@ -228,7 +264,7 @@ public class BetterPlayerMovement : MonoBehaviour
         groundCount = m_groundObjects.Count;
         if (collision.transform.CompareTag("RunnableWall"))
         {
-           // ChangeState(new WallRunState(this));
+            // ChangeState(new WallRunState(this));
             m_WallRunPending = true;
         }
 
@@ -265,11 +301,6 @@ public class BetterPlayerMovement : MonoBehaviour
 
         foreach (ContactPoint2D contact in collision.contacts)
         {
-            //Push back out
-            //Vector2 impulse = contact.normal * (contact.normalImpulse / Time.fixedDeltaTime);
-            //pos.x += impulse.x;
-            //pos.y += impulse.y;
-            //Debug.Log(pos);
 
             if (Mathf.Abs(contact.normal.y) > Mathf.Abs(contact.normal.x))
             {
@@ -280,21 +311,21 @@ public class BetterPlayerMovement : MonoBehaviour
                     {
                         m_groundObjects.Add(contact.collider.gameObject);
                     }
-                    if (GetCurrentStateName() == "FallingState")
+                    if (m_currentState is FallingState)
                     {
                         //If we've been pushed up, we've hit the ground.  Go to a ground-based state.
                         if ((m_wantsRight || m_wantsLeft) && !collision.transform.CompareTag("RunnableWall"))
                         {
                             ChangeState(new GroundedState(this));
                         }
-                        else if(collision.transform.CompareTag("RunnableWall"))
+                        else if (collision.transform.CompareTag("RunnableWall"))
                         {
                             ChangeState(new WallRunState(this));
                         }
                     }
                 }
                 //Hit Roof
-                else if ( GetCurrentStateName() != "WallRunState" && !collision.transform.CompareTag("RunnableWall"))
+                else if (m_currentState is WallRunState && !collision.transform.CompareTag("RunnableWall"))
                 {
                     ChangeState(new FallingState(this));
 
