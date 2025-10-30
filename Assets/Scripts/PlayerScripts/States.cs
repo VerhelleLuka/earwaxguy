@@ -37,7 +37,7 @@ public abstract class PlayerState
 
     public float stateTimer = 0.0f;
     public const float maxVelocity = 15f;
-    public const float moveSpeed = 300f;
+    public const float moveSpeed = 400f;
 
     public static Vector2 wallNormal;
     // public abstract PlayerState GetState();
@@ -129,7 +129,7 @@ public class GroundedState : PlayerState
     {
         player.canDash = true;
 
-        Debug.Log("Entering Grounded State");
+        //Debug.Log("Entering Grounded State");
         // Debug.Log(player.previousState);
     }
 
@@ -184,11 +184,14 @@ public class WallRunState : PlayerState
     //To stop coroutine from happening
     private bool playerLeftWall = false;
 
+    private float initialGravScale;
+
     public WallRunState(BetterPlayerMovement player) : base(player) { }
 
     public override void Enter()
     {
         playerLeftWall = false;
+        initialGravScale = player.body.gravityScale;
         player.body.gravityScale = 0;
         player.canDash = true;
         wallStickGraceTimer = 0.1f;
@@ -217,12 +220,12 @@ public class WallRunState : PlayerState
 
     public override void Exit()
     {
-        player.body.gravityScale = 1.5f;
+        player.body.gravityScale = initialGravScale;
 
         playerLeftWall = true;
         player.StopCoroutine(AddForceToStick());
         
-        //f("EXIT WALLRUN");
+        //("EXIT WALLRUN");
 
     }
     IEnumerator AddForceToStick()
@@ -289,6 +292,7 @@ public class WallRunState : PlayerState
         if (inputMag < stopThreshold)
         {
             isFollowingWall = false;
+            initialInputDir = Vector2.zero;
         }
         Vector2 moveDir;
         if (isFollowingWall)
@@ -376,12 +380,13 @@ public class FallingState : PlayerState
         if (player.jumpBufferRequest)
             player.jumpBufferTime -= Time.fixedDeltaTime;
 
-        if (player.groundObjects.Count > 0)
+        if (player.groundObjects.Count > 0 || player.wallRunPending)
         {
             if (player.jumpBufferTime >= 0f && player.jumpBufferRequest)
             {
                 player.ChangeState(new JumpingState(player));
                 player.jumpBufferTime = 0.2f;
+                player.jumpGraceTime = 0f;
                 player.jumpBufferRequest = false;
                 return;
             }
@@ -407,7 +412,7 @@ public class SwingingState : PlayerState
 
     public override void Enter()
     {
-        Debug.Log("Entering Swinging State");
+        //Debug.Log("Entering Swinging State");
         player.lineRenderer.enabled = true;
 
         if (player.springJoint == null)
@@ -418,7 +423,6 @@ public class SwingingState : PlayerState
             player.springJoint.enableCollision = false;
         }
 
-        player.lineRenderer.SetPosition(0, new Vector3(player.swingPosition.x, player.swingPosition.y, -1f));
 
     }
     private float exitForce = 5f;
@@ -426,6 +430,8 @@ public class SwingingState : PlayerState
     {
         player.body.AddForce(player.body.velocity.normalized * exitForce);
         player.canDash = true;
+        player.lineRenderer.enabled = false;
+
     }
 
     public override void Update()
@@ -435,7 +441,8 @@ public class SwingingState : PlayerState
         float angle = Mathf.Atan2(relativePos.y, relativePos.x) * Mathf.Rad2Deg;
         angle += player.swingRotationOffset;
         player.transform.rotation = Quaternion.Euler(new Vector3(0, 0, angle));
-        player.lineRenderer.SetPosition(1, new Vector3(player.transform.position.x, player.transform.position.y, -1f));
+        player.lineRenderer.SetPosition(0, new Vector3(player.swingPosition.x, player.swingPosition.y, 0f));
+        player.lineRenderer.SetPosition(1, new Vector3(player.transform.position.x, player.transform.position.y, 0f));
 
         player.angularVelocityBeforeSwing = player.body.angularVelocity;
 
@@ -509,7 +516,6 @@ public class DashState : PlayerState
             Vector2 normalizedVector = mousePos - player.transform.position;
 
             newVelocity = normalizedVector.normalized;
-            //Debug.Log(Vector2.Dot(normalizedVector.normalized, player.body.velocity.normalized));
 
             if (Vector2.Dot(normalizedVector.normalized, player.body.velocity.normalized) > 0)
             {

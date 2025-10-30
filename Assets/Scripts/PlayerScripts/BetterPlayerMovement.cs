@@ -8,10 +8,6 @@ using static Cinemachine.DocumentationSortingAttribute;
 
 public class BetterPlayerMovement : MonoBehaviour
 {
-
-
-
-
     public Rigidbody2D body = null;
     private bool m_wantsRight = false;
     private bool m_wantsLeft = false;
@@ -47,6 +43,7 @@ public class BetterPlayerMovement : MonoBehaviour
     //arms
     public LineRenderer lineRenderer;
     public DistanceJoint2D springJoint;
+    public Material ropeMaterial;
 
     //States
 
@@ -60,7 +57,7 @@ public class BetterPlayerMovement : MonoBehaviour
     public bool jumpBufferRequest = false;
 
     //wallrun
-    private bool m_WallRunPending = false;
+    public bool wallRunPending = false;
 
 
 
@@ -84,6 +81,11 @@ public class BetterPlayerMovement : MonoBehaviour
         ChangeState(new GroundedState(this));
         body = GetComponent<Rigidbody2D>();
         body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+
+        lineRenderer.textureMode = LineTextureMode.Stretch;
+        lineRenderer.material = ropeMaterial;
+        lineRenderer.startWidth = 0.2f;
+        lineRenderer.endWidth = 0.4f;
     }
 
     private void FixedUpdate()
@@ -94,10 +96,10 @@ public class BetterPlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (m_WallRunPending)
+        if (wallRunPending)
         {
             ChangeState(new WallRunState(this));
-            m_WallRunPending = false;
+            wallRunPending = false;
         }
 
         if (!canDash)
@@ -117,10 +119,10 @@ public class BetterPlayerMovement : MonoBehaviour
             Vector3 swingPos = swingPosition;
             //Draw line halfway between player and swing
             Vector3 lineRendererPos = playerPos + 0.5f * (swingPos - playerPos);
-            lineRendererPos.z = -1f;
+            lineRendererPos.z = 0f;
             lineRenderer.SetPosition(0, lineRendererPos);
 
-            lineRenderer.SetPosition(1, new Vector3(transform.position.x, transform.position.y, -1f));
+            lineRenderer.SetPosition(1, new Vector3(transform.position.x, transform.position.y, 0f));
         }
 
         //brake
@@ -147,32 +149,39 @@ public class BetterPlayerMovement : MonoBehaviour
         bool dashState = m_currentState is DashState;
         bool jumping = m_currentState is JumpingState;
 
-        // 1) Wallrun jump: always allow if wallrunning
-        if (onWallRun && !jumping && !dashState)
+        if (jumping || dashState)
+            return;
+
+        // --- WALLRUN JUMP ---
+        if (onWallRun)
         {
             ChangeState(new JumpingState(this));
             jumpGraceTime = -1f;
+            jumpBufferRequest = false;
             return;
         }
 
-        // 2) Normal grounded jump
-        if (onGround && !jumping && !dashState)
+        // --- GROUNDED JUMP ---
+        if (onGround)
+        {
+
+            ChangeState(new JumpingState(this));
+            jumpGraceTime = -1f;
+            jumpBufferRequest = false;
+            return;
+        }
+
+        // --- COYOTE TIME JUMP ---
+        if (falling && jumpGraceTime > 0f && previousState is not JumpingState)
         {
             ChangeState(new JumpingState(this));
             jumpGraceTime = -1f;
+            jumpBufferRequest = false;
             return;
         }
 
-        // 3) Coyote time jump: allow shortly after leaving ground
-        if (falling && jumpGraceTime > 0f && previousState is not JumpingState && !jumping && !dashState)
-        {
-            ChangeState(new JumpingState(this));
-            jumpGraceTime = -1f;
-            return;
-        }
-
-        // 4) Buffered jump: pressed while falling but allowed to execute when landing
-        if (falling && !jumping && !dashState)
+        // --- BUFFER JUMP ---
+        if (falling)
         {
             jumpBufferRequest = true;
             jumpBufferTime = 0.2f;
@@ -189,7 +198,6 @@ public class BetterPlayerMovement : MonoBehaviour
             Swinging = false;
             Destroy(springJoint);
             body.angularVelocity = angularVelocityBeforeSwing;
-            lineRenderer.enabled = false;
             if (m_groundObjects.Count > 0)
             {
                 ChangeState(new GroundedState(this));
@@ -197,6 +205,9 @@ public class BetterPlayerMovement : MonoBehaviour
             }
             else if(m_currentState is not WallRunState)
                 ChangeState(new FallingState(this));
+
+            lineRenderer.enabled = false;
+
         }
         else if (CanSwing)
         {
@@ -249,11 +260,11 @@ public class BetterPlayerMovement : MonoBehaviour
 
     private void OnTriggerExit2D(Collider2D collision)
     {
-        if (collision.gameObject.tag == ("Swing"))
+        if (collision.gameObject.tag == "Swing")
         {
             CanSwing = false;
 
-            if (m_currentState is SwingingState)
+            if (m_currentState is not SwingingState)
                 lineRenderer.enabled = false;
         }
     }
@@ -265,7 +276,7 @@ public class BetterPlayerMovement : MonoBehaviour
         if (collision.transform.CompareTag("RunnableWall"))
         {
             // ChangeState(new WallRunState(this));
-            m_WallRunPending = true;
+            wallRunPending = true;
         }
 
     }
@@ -280,7 +291,7 @@ public class BetterPlayerMovement : MonoBehaviour
 
             if (Object.CompareTag("RunnableWall"))
             {
-                m_WallRunPending = true;
+                wallRunPending = true;
                 //ChangeState(new WallRunState(this));
             }
         }
