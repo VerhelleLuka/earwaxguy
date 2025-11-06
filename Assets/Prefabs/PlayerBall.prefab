@@ -421,7 +421,7 @@ Rigidbody2D:
   m_Mass: 1
   m_LinearDrag: 0
   m_AngularDrag: 0.05
-  m_GravityScale: 1.5
+  m_GravityScale: 2
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -471,7 +471,11 @@ MonoBehaviour:
   angularVelocityBeforeSwing: 0
   lineRenderer: {fileID: 1425373239664854047}
   springJoint: {fileID: 0}
+  ropeMaterial: {fileID: 2100000, guid: c1eb0b5c6d4d6e345a6122c659b1ffb1, type: 2}
   jumpGraceTime: 0
+  jumpBufferTime: 0.2
+  jumpBufferRequest: 0
+  wallRunPending: 0
 --- !u!1 &915676239332472760
 GameObject:
   m_ObjectHideFlags: 0
@@ -513,7 +517,7 @@ LineRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 915676239332472760}
   m_Enabled: 1
-  m_CastShadows: 1
+  m_CastShadows: 0
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
   m_StaticShadowCaster: 0
@@ -527,7 +531,7 @@ LineRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 0}
+  - {fileID: 2100000, guid: c1eb0b5c6d4d6e345a6122c659b1ffb1, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -602,7 +606,7 @@ LineRenderer:
     numCornerVertices: 0
     numCapVertices: 0
     alignment: 0
-    textureMode: 0
+    textureMode: 1
     textureScale: {x: 1, y: 1}
     shadowBias: 0.5
     generateLightingData: 0
@@ -5526,7 +5530,7 @@ ParticleSystemRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 0}
+  - {fileID: 2100000, guid: c1eb0b5c6d4d6e345a6122c659b1ffb1, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

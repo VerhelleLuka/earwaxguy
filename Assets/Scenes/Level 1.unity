@@ -1193,14 +1193,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 15759222352524606, guid: 9236f9a07374e6f4aa49cf061769ff69, type: 3}
-      propertyPath: m_GravityScale
-      value: 2
-      objectReference: {fileID: 0}
-    - target: {fileID: 68599687203435061, guid: 9236f9a07374e6f4aa49cf061769ff69, type: 3}
-      propertyPath: ropeMaterial
-      value: 
-      objectReference: {fileID: 2100000, guid: c1eb0b5c6d4d6e345a6122c659b1ffb1, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1686,30 +1678,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1912477538}
     m_Modifications:
-    - target: {fileID: 811554171097908365, guid: 20e988be308eca04ba5e72d155db4c0f, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 811554171097908365, guid: 20e988be308eca04ba5e72d155db4c0f, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 811554171097908365, guid: 20e988be308eca04ba5e72d155db4c0f, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1100986142133676935, guid: 20e988be308eca04ba5e72d155db4c0f, type: 3}
-      propertyPath: m_LocalScale.x
-      value: 0.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 1100986142133676935, guid: 20e988be308eca04ba5e72d155db4c0f, type: 3}
-      propertyPath: m_LocalScale.y
-      value: 0.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 1100986142133676935, guid: 20e988be308eca04ba5e72d155db4c0f, type: 3}
-      propertyPath: m_LocalScale.z
-      value: 0.5
-      objectReference: {fileID: 0}
     - target: {fileID: 1100986142133676935, guid: 20e988be308eca04ba5e72d155db4c0f, type: 3}
       propertyPath: m_LocalPosition.x
       value: -158.52
@@ -1750,10 +1718,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4706775392932649962, guid: 20e988be308eca04ba5e72d155db4c0f, type: 3}
-      propertyPath: 'm_Materials.Array.data[0]'
-      value: 
-      objectReference: {fileID: 2100000, guid: c1eb0b5c6d4d6e345a6122c659b1ffb1, type: 2}
     - target: {fileID: 6110820277830476875, guid: 20e988be308eca04ba5e72d155db4c0f, type: 3}
       propertyPath: m_Name
       value: Swing (4)
